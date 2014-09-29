@@ -86,14 +86,6 @@ describe "pg_upsert from file with CSV format" do
     expect(TestModel.count).to eq 2
   end
 
-  it "should be able to copy using custom set of columns" do
-    TestModel.pg_upsert(File.open(File.expand_path('spec/fixtures/tab_only_data.csv'), 'r'), :delimiter => "\t", :columns => ["data"])
-
-    expect(
-      TestModel.first.attributes
-    ).to include('data' => 'test data 1', 'created_at' => timestamp, 'updated_at' => timestamp)
-  end
-
   it "should not expect a header when :header is false" do
     TestModel.pg_upsert(File.open(File.expand_path('spec/fixtures/comma_without_header.csv'), 'r'), :header => false, :columns => [:id,:data])
 
@@ -180,6 +172,15 @@ describe "pg_upsert from file with CSV format" do
       expect(
         TestModel.find(2).attributes
       ).to eq("id"=>2, "data"=>"test data 2", "created_at" => timestamp, "updated_at" => timestamp)
+    end
+
+    it "should be able to copy using custom set of columns" do
+      ThreeColumn.create(id: 1, data: "old stuff", extra: "neva change!", created_at: original_created_at)
+      ThreeColumn.pg_upsert(File.open(File.expand_path('spec/fixtures/tab_only_data.csv'), 'r'), :delimiter => "\t", :columns => ["id", "data"])
+
+      expect(
+        ThreeColumn.first.attributes
+      ).to eq('id' => 1, 'data' => 'test data 1', 'extra' => "neva change!", 'created_at' => original_created_at, 'updated_at' => timestamp)
     end
   end
 end

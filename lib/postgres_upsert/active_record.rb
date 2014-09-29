@@ -20,7 +20,7 @@ module ActiveRecord
       destination_table = get_table_name(options)
 
       columns_string = columns_string_for_copy(columns_list)
-      create_temp_table(copy_table, destination_table) if destination_table
+      create_temp_table(copy_table, destination_table, columns_list) if destination_table
 
       connection.raw_connection.copy_data %{COPY #{copy_table} #{columns_string} FROM STDIN #{options_string}} do
         if block_given?
@@ -78,6 +78,12 @@ module ActiveRecord
       str << ",'#{DateTime.now.utc}'" if column_names.include?("created_at")
       str << ",'#{DateTime.now.utc}'" if column_names.include?("updated_at")
       str
+    end
+
+    def self.select_string_for_create(columns_list)
+      columns = columns_list.map(&:to_sym)
+      columns << primary_key.to_sym unless columns.include?(primary_key.to_sym)
+      get_columns_string(columns)
     end
 
     def self.get_columns_string(columns_list)
@@ -151,13 +157,14 @@ module ActiveRecord
       SQL
     end
 
-    def self.create_temp_table(temp_table, dest_table)
+    def self.create_temp_table(temp_table, dest_table, columns_list)
+      columns_string = select_string_for_create(columns_list)
       ActiveRecord::Base.connection.execute <<-SQL
         SET client_min_messages=WARNING;
         DROP TABLE IF EXISTS #{temp_table};
-        
+
         CREATE TEMP TABLE #{temp_table} 
-          (LIKE #{dest_table} INCLUDING DEFAULTS EXCLUDING CONSTRAINTS EXCLUDING INDEXES);
+          AS SELECT #{columns_string} FROM #{dest_table} WHERE 0 = 1;
       SQL
     end
 
