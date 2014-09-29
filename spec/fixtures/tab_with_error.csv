@@ -1,3 +1,2 @@
-id	data
-1;this is a wrong separator
-
+data	id
+this is a wrong separator;1
