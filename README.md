@@ -75,6 +75,17 @@ This merge/upsert happend in 5 steps (assume your data table is called "users")
 * issue a query to update all records in users with the data in users_temp_### (matching on primary key)
 * drop the temp table.
 
+### overriding the key_column
+
+By default pg_upsert uses the primary key on your ActiveRecord table to determine if each record should be inserted or updated.  You can override the column using the :key_field option:
+
+```ruby
+User.pg_upsert "/tmp/users.dat", :format => :binary, :key_column => ["external_twitter_id"]
+```
+
+obviously, the field you pass must be a unique key in your database (this is not enforced at the moment, but will be)
+
+
 ## Note on Patches/Pull Requests
 
 * Fork the project

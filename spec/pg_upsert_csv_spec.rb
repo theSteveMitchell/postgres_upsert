@@ -4,6 +4,7 @@ describe "pg_upsert from file with CSV format" do
   before(:each) do
     ActiveRecord::Base.connection.execute %{
       TRUNCATE TABLE test_models;
+      TRUNCATE TABLE three_columns;
       SELECT setval('test_models_id_seq', 1, false);
     }
   end
@@ -181,6 +182,28 @@ describe "pg_upsert from file with CSV format" do
       expect(
         ThreeColumn.first.attributes
       ).to eq('id' => 1, 'data' => 'test data 1', 'extra' => "neva change!", 'created_at' => original_created_at, 'updated_at' => timestamp)
+    end
+  end
+
+  context 'overriding the comparison column' do
+    it 'updates records based the match column option if its passed in' do
+      three_col = ThreeColumn.create(id: 1, data: "old stuff", extra: "neva change!")
+      file = File.open(File.expand_path('spec/fixtures/no_id.csv'), 'r')
+
+
+      ThreeColumn.pg_upsert(file, :key_column => "data")
+      expect(
+        three_col.reload.extra
+      ).to eq("ABC: Always Be Changing.")
+    end
+
+    it 'inserts records if the passed match column doesnt exist' do
+      file = File.open(File.expand_path('spec/fixtures/no_id.csv'), 'r')
+
+      ThreeColumn.pg_upsert(file, :key_column => "data")
+      expect(
+        ThreeColumn.last.attributes
+      ).to include("id" => 1, "data" => "old stuff", "extra" => "ABC: Always Be Changing.")
     end
   end
 end

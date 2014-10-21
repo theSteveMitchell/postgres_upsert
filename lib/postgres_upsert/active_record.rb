@@ -7,7 +7,7 @@ module ActiveRecord
     # * You can map fields from the file to different fields in the table using a map in the options hash
     # * For further details on usage take a look at the README.md
     def self.pg_upsert path_or_io, options = {}
-      options.reverse_merge!({:delimiter => ",", :format => :csv, :header => true})
+      options.reverse_merge!({:delimiter => ",", :format => :csv, :header => true, :key_column => primary_key})
       options_string = options[:format] == :binary ? "BINARY" : "DELIMITER '#{options[:delimiter]}' CSV"
 
       io = path_or_io.instance_of?(String) ? File.open(path_or_io, 'r') : path_or_io
@@ -20,7 +20,7 @@ module ActiveRecord
       destination_table = get_table_name(options)
 
       columns_string = columns_string_for_copy(columns_list)
-      create_temp_table(copy_table, destination_table, columns_list) if destination_table
+      create_temp_table(copy_table, destination_table, columns_list, options) if destination_table
 
       connection.raw_connection.copy_data %{COPY #{copy_table} #{columns_string} FROM STDIN #{options_string}} do
         if block_given?
@@ -33,7 +33,7 @@ module ActiveRecord
       end
 
       if destination_table
-        upsert_from_temp_table(copy_table, destination_table, columns_list)
+        upsert_from_temp_table(copy_table, destination_table, columns_list, options)
         drop_temp_table(copy_table)
       end
     end
@@ -80,9 +80,9 @@ module ActiveRecord
       str
     end
 
-    def self.select_string_for_create(columns_list)
+    def self.select_string_for_create(columns_list, options)
       columns = columns_list.map(&:to_sym)
-      columns << primary_key.to_sym unless columns.include?(primary_key.to_sym)
+      columns << options[:key_column].to_sym unless columns.include?(options[:key_column].to_sym)
       get_columns_string(columns)
     end
 
@@ -119,18 +119,18 @@ module ActiveRecord
       end
     end
 
-    def self.upsert_from_temp_table(temp_table, dest_table, columns_list)
-      update_from_temp_table(temp_table, dest_table, columns_list)
-      insert_from_temp_table(temp_table, dest_table, columns_list)
+    def self.upsert_from_temp_table(temp_table, dest_table, columns_list, options)
+      update_from_temp_table(temp_table, dest_table, columns_list, options)
+      insert_from_temp_table(temp_table, dest_table, columns_list, options)
     end
 
-    def self.update_from_temp_table(temp_table, dest_table, columns_list)
+    def self.update_from_temp_table(temp_table, dest_table, columns_list, options)
       ActiveRecord::Base.connection.execute <<-SQL
         UPDATE #{dest_table} AS d
           #{update_set_clause(columns_list)}
           FROM #{temp_table} as t
-          WHERE t.#{primary_key} = d.#{primary_key}
-          AND d.#{primary_key} IS NOT NULL;
+          WHERE t.#{options[:key_column]} = d.#{options[:key_column]}
+          AND d.#{options[:key_column]} IS NOT NULL;
       SQL
     end
 
@@ -142,7 +142,7 @@ module ActiveRecord
       "SET #{command.join(',')}"
     end
 
-    def self.insert_from_temp_table(temp_table, dest_table, columns_list)
+    def self.insert_from_temp_table(temp_table, dest_table, columns_list, options)
       columns_string = columns_string_for_insert(columns_list)
       select_string = select_string_for_insert(columns_list)
       ActiveRecord::Base.connection.execute <<-SQL
@@ -152,13 +152,13 @@ module ActiveRecord
           WHERE NOT EXISTS 
             (SELECT 1 
                   FROM #{dest_table} as d 
-                  WHERE d.#{primary_key} = t.#{primary_key})
-          AND t.#{primary_key} IS NOT NULL;
+                  WHERE d.#{options[:key_column]} = t.#{options[:key_column]})
+          AND t.#{options[:key_column]} IS NOT NULL;
       SQL
     end
 
-    def self.create_temp_table(temp_table, dest_table, columns_list)
-      columns_string = select_string_for_create(columns_list)
+    def self.create_temp_table(temp_table, dest_table, columns_list, options)
+      columns_string = select_string_for_create(columns_list, options)
       ActiveRecord::Base.connection.execute <<-SQL
         SET client_min_messages=WARNING;
         DROP TABLE IF EXISTS #{temp_table};
