@@ -8,7 +8,8 @@ module PostgresUpsert
         :delimiter => ",", 
         :format => :csv, 
         :header => true, 
-        :key_column => @klass.primary_key})
+        :key_column => @klass.primary_key,
+        :update_only => false})
       @source = source.instance_of?(String) ? File.open(source, 'r') : source
       @columns_list = get_columns
       generate_temp_table_name
@@ -120,7 +121,7 @@ module PostgresUpsert
 
     def upsert_from_temp_table
       update_from_temp_table
-      insert_from_temp_table
+      insert_from_temp_table unless @options[:update_only]
     end
 
     def update_from_temp_table

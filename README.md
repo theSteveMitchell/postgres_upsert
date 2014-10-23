@@ -19,9 +19,16 @@ Run the bundle command
 
 The gem will add the aditiontal class method to ActiveRecord::Base
 
-* pg_upsert
+* pg_upsert io_object_or_file_path, [options]
 
-### Using pg_upsert
+io_object_or_file_path => is a file path or an io object (StringIO, FileIO, etc.)
+
+options:
+:delimiter - the string to use to delimit fields.  Default is ","
+:format - the format of the file (valid formats are :csv or :binary).  Default is :csv
+:header => specifies if the file/io source contains a header row.  Either :header option must be true, or :columns list must be passed.  Default true
+:key_column => the primary key or unique key column on your ActiveRecord table, used to distinguish new records from existing records.  Default is the primary_key of your ActiveRecord model class.
+:update_only => when true, postgres_upsert will ONLY update existing records, and not insert new.  Default is false.
 
 pg_upsert will allow you to copy data from an arbritary IO object or from a file in the database server (when you pass the path as string).
 Let's first copy from a file in the database server, assuming again that we have a users table and
@@ -74,6 +81,7 @@ User.pg_upsert "/tmp/users.dat", :format => :binary, :key_column => ["external_t
 
 obviously, the field you pass must be a unique key in your database (this is not enforced at the moment, but will be)
 
+passing :update_only = true will ensure that no new records are created, but records will be updated.
 
 ## Note on Patches/Pull Requests
 

@@ -183,5 +183,24 @@ describe "pg_upsert from file with CSV format" do
       ).to include("id" => 1, "data" => "old stuff", "extra" => "ABC: Always Be Changing.")
     end
   end
+
+  context 'update only' do
+    let(:original_created_at) {5.days.ago.utc}
+    before(:each) do
+      TestModel.create(id: 1, data: "From the before time, in the long long ago", :created_at => original_created_at)
+    end
+    it 'will only update and not insert if insert_only flag is passed.' do
+      TestModel.pg_upsert File.expand_path('spec/fixtures/tab_with_two_lines.csv'), :delimiter => "\t", :update_only => true
+
+      expect(
+        TestModel.find(1).attributes
+      ).to eq("id"=>1, "data"=>"test data 1", "created_at" => original_created_at  , "updated_at" => timestamp)
+      expect{
+        TestModel.find(2)
+      }.to raise_error(ActiveRecord::RecordNotFound)
+
+    end
+
+  end
 end
 
