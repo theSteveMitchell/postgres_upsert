@@ -39,17 +39,6 @@ User.pg_upsert "/tmp/users.csv", :map => {'name' => 'first_name'}
 ```
 
 In the above example the header name in the CSV file will be mapped to the field called first_name in the users table.
-You can also manipulate and modify the values of the file being imported before they enter into the database using a block:
-
-```ruby
-User.pg_upsert "/tmp/users.csv" do |row|
-  row[0] = "fixed string"
-end
-```
-
-The above example will always change the value of the first column to "fixed string" before storing it into the database.
-For each iteration of the block row receives an array with the same order as the columns in the CSV file.
-
 
 To copy a binary formatted data file or IO object you can specify the format as binary
 
