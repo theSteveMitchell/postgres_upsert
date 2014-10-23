@@ -64,29 +64,6 @@ describe "pg_upsert from file with CSV format" do
     ).to include('data' => 'test data 1', 'created_at' => timestamp, 'updated_at' => timestamp)
   end
 
-  it "should import and allow changes in block" do
-    TestModel.pg_upsert(File.open(File.expand_path('spec/fixtures/comma_with_header.csv'), 'r')) do |row|
-      row[1] = 'changed this data'
-    end
-    expect(
-      TestModel.first.attributes
-    ).to include('data' => 'changed this data', 'created_at' => timestamp, 'updated_at' => timestamp)
-  end
-
-  it "should import 2 lines and allow changes in block" do
-    TestModel.pg_upsert(File.open(File.expand_path('spec/fixtures/tab_with_two_lines.csv'), 'r'), :delimiter => "\t") do |row|
-      row[1] = 'changed this data'
-    end
-
-    expect(
-      TestModel.find(1).attributes
-    ).to include('data' => 'changed this data', 'created_at' => timestamp, 'updated_at' => timestamp)
-    expect(
-      TestModel.find(2).attributes
-    ).to include('data' => 'changed this data', 'created_at' => timestamp, 'updated_at' => timestamp)
-    expect(TestModel.count).to eq 2
-  end
-
   it "should not expect a header when :header is false" do
     TestModel.pg_upsert(File.open(File.expand_path('spec/fixtures/comma_without_header.csv'), 'r'), :header => false, :columns => [:id,:data])
 

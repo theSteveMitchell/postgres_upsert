@@ -1,6 +1,7 @@
 require 'rubygems'
 require 'active_record'
 require 'postgres_upsert/active_record'
+require 'postgres_upsert/writer'
 require 'rails'
 
 class PostgresCopy < Rails::Railtie
