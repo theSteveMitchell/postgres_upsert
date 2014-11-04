@@ -124,7 +124,7 @@ module PostgresUpsert
     end
 
     def get_table_name
-      ActiveRecord::Base.connection.quote_table_name(@options[:table] || @table_name)
+      ActiveRecord::Base.connection.quote_table_name(@table_name)
     end
 
     def generate_temp_table_name
