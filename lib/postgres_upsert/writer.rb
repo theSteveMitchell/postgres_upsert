@@ -23,7 +23,6 @@ module PostgresUpsert
       csv_options = @options[:format] == :binary ? "BINARY" : "DELIMITER '#{@options[:delimiter]}' CSV"
 
       copy_table = @temp_table_name
-      destination_table = quoted_table_name
 
       columns_string = columns_string_for_copy
       create_temp_table
@@ -36,10 +35,8 @@ module PostgresUpsert
         end
       end
 
-      if destination_table
-        upsert_from_temp_table
-        drop_temp_table
-      end
+      upsert_from_temp_table
+      drop_temp_table
     end
 
   private
