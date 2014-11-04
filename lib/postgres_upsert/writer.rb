@@ -23,7 +23,7 @@ module PostgresUpsert
       csv_options = @options[:format] == :binary ? "BINARY" : "DELIMITER '#{@options[:delimiter]}' CSV"
 
       copy_table = @temp_table_name
-      destination_table = get_table_name
+      destination_table = quoted_table_name
 
       columns_string = columns_string_for_copy
       create_temp_table
@@ -123,7 +123,7 @@ module PostgresUpsert
       columns.size > 0 ? "\"#{columns.join('","')}\"" : ""
     end
 
-    def get_table_name
+    def quoted_table_name
       ActiveRecord::Base.connection.quote_table_name(@table_name)
     end
 
@@ -150,7 +150,7 @@ module PostgresUpsert
 
     def update_from_temp_table
       ActiveRecord::Base.connection.execute <<-SQL
-        UPDATE #{get_table_name} AS d
+        UPDATE #{quoted_table_name} AS d
           #{update_set_clause}
           FROM #{@temp_table_name} as t
           WHERE t.#{@options[:key_column]} = d.#{@options[:key_column]}
@@ -170,12 +170,12 @@ module PostgresUpsert
       columns_string = columns_string_for_insert
       select_string = select_string_for_insert
       ActiveRecord::Base.connection.execute <<-SQL
-        INSERT INTO #{get_table_name} (#{columns_string})
+        INSERT INTO #{quoted_table_name} (#{columns_string})
           SELECT #{select_string}
           FROM #{@temp_table_name} as t
           WHERE NOT EXISTS 
             (SELECT 1 
-                  FROM #{get_table_name} as d 
+                  FROM #{quoted_table_name} as d 
                   WHERE d.#{@options[:key_column]} = t.#{@options[:key_column]})
           AND t.#{@options[:key_column]} IS NOT NULL;
       SQL
@@ -188,7 +188,7 @@ module PostgresUpsert
         DROP TABLE IF EXISTS #{@temp_table_name};
 
         CREATE TEMP TABLE #{@temp_table_name} 
-          AS SELECT #{columns_string} FROM #{get_table_name} WHERE 0 = 1;
+          AS SELECT #{columns_string} FROM #{quoted_table_name} WHERE 0 = 1;
       SQL
     end
 
