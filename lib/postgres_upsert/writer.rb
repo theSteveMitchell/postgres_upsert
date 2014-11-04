@@ -2,13 +2,13 @@ module PostgresUpsert
 
   class Writer
 
-    def initialize(klass, source, options = {})
-      @klass = klass
+    def initialize(table_name, source, options = {})
+      @table_name = table_name
       @options = options.reverse_merge({
         :delimiter => ",", 
         :format => :csv, 
         :header => true, 
-        :key_column => @klass.primary_key,
+        :key_column => primary_key,
         :update_only => false})
       @source = source.instance_of?(String) ? File.open(source, 'r') : source
       @columns_list = get_columns
@@ -44,6 +44,34 @@ module PostgresUpsert
 
   private
 
+    def primary_key
+      @primary_key ||= begin
+        query = <<-sql
+          SELECT
+            pg_attribute.attname,
+            format_type(pg_attribute.atttypid, pg_attribute.atttypmod)
+          FROM pg_index, pg_class, pg_attribute
+          WHERE
+            pg_class.oid = '#{@table_name}'::regclass AND
+            indrelid = pg_class.oid AND
+            pg_attribute.attrelid = pg_class.oid AND
+            pg_attribute.attnum = any(pg_index.indkey)
+          AND indisprimary
+        sql
+
+        pg_result = ActiveRecord::Base.connection.execute query
+        pg_result.each{ |row| return row['attname'] }
+      end
+    end
+
+    def column_names
+      @column_names ||= begin
+        query = "SELECT * FROM information_schema.columns WHERE TABLE_NAME = '#{@table_name}'"
+        pg_result = ActiveRecord::Base.connection.execute query
+        pg_result.map{ |row| row['column_name'] }
+      end
+    end
+
     def get_columns
       columns_list = @options[:columns] || []
       if @options[:format] != :binary && @options[:header]
@@ -64,23 +92,23 @@ module PostgresUpsert
 
     def columns_string_for_select
       columns = @columns_list.clone
-      columns << "created_at" if @klass.column_names.include?("created_at")
-      columns << "updated_at" if @klass.column_names.include?("updated_at")
+      columns << "created_at" if column_names.include?("created_at")
+      columns << "updated_at" if column_names.include?("updated_at")
       str = get_columns_string(columns)
     end
 
     def columns_string_for_insert
       columns = @columns_list.clone
-      columns << "created_at" if @klass.column_names.include?("created_at")
-      columns << "updated_at" if @klass.column_names.include?("updated_at")
+      columns << "created_at" if column_names.include?("created_at")
+      columns << "updated_at" if column_names.include?("updated_at")
       str = get_columns_string(columns)
     end
 
     def select_string_for_insert
       columns = @columns_list.clone
       str = get_columns_string(columns)
-      str << ",'#{DateTime.now.utc}'" if @klass.column_names.include?("created_at")
-      str << ",'#{DateTime.now.utc}'" if @klass.column_names.include?("updated_at")
+      str << ",'#{DateTime.now.utc}'" if column_names.include?("created_at")
+      str << ",'#{DateTime.now.utc}'" if column_names.include?("updated_at")
       str
     end
 
@@ -96,15 +124,11 @@ module PostgresUpsert
     end
 
     def get_table_name
-      if @options[:table]
-        connection.quote_table_name(@options[:table])
-      else
-        @klass.quoted_table_name
-      end
+      ActiveRecord::Base.connection.quote_table_name(@options[:table] || @table_name)
     end
 
     def generate_temp_table_name
-      @temp_table_name = "#{@klass.table_name}_temp_#{rand(1000)}"
+      @temp_table_name = "#{@table_name}_temp_#{rand(1000)}"
     end
 
     def read_input_line
@@ -138,7 +162,7 @@ module PostgresUpsert
       command = @columns_list.map do |col|
         "\"#{col}\" = t.\"#{col}\""
       end
-      command << "\"updated_at\" = '#{DateTime.now.utc}'" if @klass.column_names.include?("updated_at") 
+      command << "\"updated_at\" = '#{DateTime.now.utc}'" if column_names.include?("updated_at")
       "SET #{command.join(',')}"
     end
 

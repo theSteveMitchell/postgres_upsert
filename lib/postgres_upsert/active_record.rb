@@ -7,7 +7,7 @@ module ActiveRecord
     # * You can map fields from the file to different fields in the table using a map in the options hash
     # * For further details on usage take a look at the README.md
     def self.pg_upsert path_or_io, options = {}
-      PostgresUpsert::Writer.new(self, path_or_io, options).write
+      PostgresUpsert::Writer.new(table_name, path_or_io, options).write
     end
   end
 end
