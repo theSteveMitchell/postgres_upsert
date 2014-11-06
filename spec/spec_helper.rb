@@ -1,9 +1,7 @@
 $LOAD_PATH.unshift(File.dirname(__FILE__))
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
 require 'pg'
-require 'fixtures/test_model'
-require 'fixtures/three_column'
-require 'fixtures/reserved_word_model'
+require 'postgres_upsert'
 require 'rspec'
 require 'rspec/autorun'
 
