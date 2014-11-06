@@ -2,7 +2,14 @@ require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 
 describe "pg_upsert from file with binary data" do
   before(:each) do
-    ActiveRecord::Base.connection.execute %{
+    @conn ||= PG::Connection.open(
+      :host     => "localhost",
+      :user     => "postgres",
+      :password => "postgres",
+      :port     => 5432,
+      :dbname   => "ar_pg_copy_test"
+    )
+    @conn.exec_params %{
       TRUNCATE TABLE test_models;
       SELECT setval('test_models_id_seq', 1, false);
     }

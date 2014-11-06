@@ -1,8 +1,14 @@
 module PostgresUpsert
 
   class Writer
+    attr_reader :conn
 
-    def initialize(table_name, source, options = {})
+    # @param PG::Connection conn
+    # @param String table_name
+    # @param String|IO source
+    # @param Hash options
+    def initialize(conn, table_name, source, options = {})
+      @conn = conn
       @table_name = table_name
       @options = options.reverse_merge({
         :delimiter => ",", 
@@ -40,10 +46,6 @@ module PostgresUpsert
     end
 
   private
-
-    def conn
-      @conn ||= ActiveRecord::Base.connection.raw_connection
-    end
 
     def primary_key
       @primary_key ||= begin

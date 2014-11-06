@@ -2,7 +2,14 @@ require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 
 describe "pg_upsert from file with CSV format" do
   before(:each) do
-    ActiveRecord::Base.connection.execute %{
+    @conn ||= PG::Connection.open(
+      :host     => "localhost",
+      :user     => "postgres",
+      :password => "postgres",
+      :port     => 5432,
+      :dbname   => "ar_pg_copy_test"
+    )
+    @conn.exec_params %{
       TRUNCATE TABLE test_models;
       TRUNCATE TABLE three_columns;
       SELECT setval('test_models_id_seq', 1, false);
@@ -136,12 +143,18 @@ describe "pg_upsert from file with CSV format" do
 
     it "should clean up the temp table after completion" do
       TestModel.pg_upsert File.expand_path('spec/fixtures/tab_with_two_lines.csv'), :delimiter => "\t"
-      
-      ActiveRecord::Base.connection.tables.should_not include("test_models_temp")
+      pg_result = @conn.exec_params <<-sql
+        SELECT table_schema,table_name
+        FROM information_schema.tables
+        ORDER BY table_schema,table_name;
+      sql
+
+      table_names = pg_result.map{ |row| row['table_name'] }
+      table_names.should_not include("test_models_temp")
     end
 
     it "should gracefully drop the temp table if it already exists" do
-      ActiveRecord::Base.connection.execute "CREATE TEMP TABLE test_models_temp (LIKE test_models);"
+      @conn.exec_params "CREATE TEMP TABLE test_models_temp (LIKE test_models);"
       TestModel.pg_upsert File.expand_path('spec/fixtures/tab_with_two_lines.csv'), :delimiter => "\t"
 
       expect(
