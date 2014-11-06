@@ -27,11 +27,11 @@ module PostgresUpsert
       columns_string = columns_string_for_copy
       create_temp_table
 
-      ActiveRecord::Base.connection.raw_connection.copy_data %{COPY #{copy_table} #{columns_string} FROM STDIN #{csv_options}} do
+      conn.raw_connection.copy_data %{COPY #{copy_table} #{columns_string} FROM STDIN #{csv_options}} do
 
         while line = read_input_line do
           next if line.strip.size == 0
-          ActiveRecord::Base.connection.raw_connection.put_copy_data line
+          conn.raw_connection.put_copy_data line
         end
       end
 
@@ -40,6 +40,10 @@ module PostgresUpsert
     end
 
   private
+
+    def conn
+      @conn ||= ActiveRecord::Base.connection
+    end
 
     def primary_key
       @primary_key ||= begin
@@ -56,7 +60,7 @@ module PostgresUpsert
           AND indisprimary
         sql
 
-        pg_result = ActiveRecord::Base.connection.execute query
+        pg_result = conn.execute query
         pg_result.each{ |row| return row['attname'] }
       end
     end
@@ -64,7 +68,7 @@ module PostgresUpsert
     def column_names
       @column_names ||= begin
         query = "SELECT * FROM information_schema.columns WHERE TABLE_NAME = '#{@table_name}'"
-        pg_result = ActiveRecord::Base.connection.execute query
+        pg_result = conn.execute query
         pg_result.map{ |row| row['column_name'] }
       end
     end
@@ -121,7 +125,7 @@ module PostgresUpsert
     end
 
     def quoted_table_name
-      @quoted_table_name ||= ActiveRecord::Base.connection.quote_table_name(@table_name)
+      @quoted_table_name ||= conn.quote_table_name(@table_name)
     end
 
     def generate_temp_table_name
@@ -146,7 +150,7 @@ module PostgresUpsert
     end
 
     def update_from_temp_table
-      ActiveRecord::Base.connection.execute <<-SQL
+      conn.execute <<-SQL
         UPDATE #{quoted_table_name} AS d
           #{update_set_clause}
           FROM #{@temp_table_name} as t
@@ -166,7 +170,7 @@ module PostgresUpsert
     def insert_from_temp_table
       columns_string = columns_string_for_insert
       select_string = select_string_for_insert
-      ActiveRecord::Base.connection.execute <<-SQL
+      conn.execute <<-SQL
         INSERT INTO #{quoted_table_name} (#{columns_string})
           SELECT #{select_string}
           FROM #{@temp_table_name} as t
@@ -180,7 +184,7 @@ module PostgresUpsert
 
     def create_temp_table
       columns_string = select_string_for_create
-      ActiveRecord::Base.connection.execute <<-SQL
+      conn.execute <<-SQL
         SET client_min_messages=WARNING;
         DROP TABLE IF EXISTS #{@temp_table_name};
 
@@ -190,7 +194,7 @@ module PostgresUpsert
     end
 
     def drop_temp_table
-      ActiveRecord::Base.connection.execute <<-SQL
+      conn.execute <<-SQL
         DROP TABLE #{@temp_table_name} 
       SQL
     end
