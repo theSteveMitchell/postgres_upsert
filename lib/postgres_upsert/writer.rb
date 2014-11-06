@@ -60,7 +60,7 @@ module PostgresUpsert
           AND indisprimary
         sql
 
-        pg_result = conn.execute query
+        pg_result = conn.raw_connection.exec_params query
         pg_result.each{ |row| return row['attname'] }
       end
     end
@@ -68,7 +68,7 @@ module PostgresUpsert
     def column_names
       @column_names ||= begin
         query = "SELECT * FROM information_schema.columns WHERE TABLE_NAME = '#{@table_name}'"
-        pg_result = conn.execute query
+        pg_result = conn.raw_connection.exec_params query
         pg_result.map{ |row| row['column_name'] }
       end
     end
@@ -150,7 +150,7 @@ module PostgresUpsert
     end
 
     def update_from_temp_table
-      conn.execute <<-SQL
+      conn.raw_connection.exec_params <<-SQL
         UPDATE #{quoted_table_name} AS d
           #{update_set_clause}
           FROM #{@temp_table_name} as t
@@ -170,7 +170,7 @@ module PostgresUpsert
     def insert_from_temp_table
       columns_string = columns_string_for_insert
       select_string = select_string_for_insert
-      conn.execute <<-SQL
+      conn.raw_connection.exec_params <<-SQL
         INSERT INTO #{quoted_table_name} (#{columns_string})
           SELECT #{select_string}
           FROM #{@temp_table_name} as t
@@ -184,7 +184,7 @@ module PostgresUpsert
 
     def create_temp_table
       columns_string = select_string_for_create
-      conn.execute <<-SQL
+      conn.raw_connection.exec_params <<-SQL
         SET client_min_messages=WARNING;
         DROP TABLE IF EXISTS #{@temp_table_name};
 
@@ -194,7 +194,7 @@ module PostgresUpsert
     end
 
     def drop_temp_table
-      conn.execute <<-SQL
+      conn.raw_connection.exec_params <<-SQL
         DROP TABLE #{@temp_table_name} 
       SQL
     end
