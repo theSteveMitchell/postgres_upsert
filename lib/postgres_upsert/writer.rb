@@ -125,7 +125,7 @@ module PostgresUpsert
     end
 
     def quoted_table_name
-      @quoted_table_name ||= conn.quote_table_name(@table_name)
+      @quoted_table_name ||= PG::Connection::quote_ident(@table_name)
     end
 
     def generate_temp_table_name
