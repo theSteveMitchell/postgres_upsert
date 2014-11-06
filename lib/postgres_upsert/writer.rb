@@ -110,9 +110,13 @@ module PostgresUpsert
     def select_string_for_insert
       columns = @columns_list.clone
       str = get_columns_string(columns)
-      str << ",'#{DateTime.now.utc}'" if column_names.include?("created_at")
-      str << ",'#{DateTime.now.utc}'" if column_names.include?("updated_at")
+      str << ",'#{now}'" if column_names.include?("created_at")
+      str << ",'#{now}'" if column_names.include?("updated_at")
       str
+    end
+
+    def now
+      @now ||= Time.now.utc
     end
 
     def select_string_for_create
@@ -165,7 +169,7 @@ module PostgresUpsert
       command = @columns_list.map do |col|
         "\"#{col}\" = t.\"#{col}\""
       end
-      command << "\"updated_at\" = '#{DateTime.now.utc}'" if column_names.include?("updated_at")
+      command << "\"updated_at\" = '#{now}'" if column_names.include?("updated_at")
       "SET #{command.join(',')}"
     end
 
