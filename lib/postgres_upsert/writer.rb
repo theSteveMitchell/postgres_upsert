@@ -27,11 +27,11 @@ module PostgresUpsert
       columns_string = columns_string_for_copy
       create_temp_table
 
-      conn.raw_connection.copy_data %{COPY #{copy_table} #{columns_string} FROM STDIN #{csv_options}} do
+      conn.copy_data %{COPY #{copy_table} #{columns_string} FROM STDIN #{csv_options}} do
 
         while line = read_input_line do
           next if line.strip.size == 0
-          conn.raw_connection.put_copy_data line
+          conn.put_copy_data line
         end
       end
 
@@ -42,7 +42,7 @@ module PostgresUpsert
   private
 
     def conn
-      @conn ||= ActiveRecord::Base.connection
+      @conn ||= ActiveRecord::Base.connection.raw_connection
     end
 
     def primary_key
@@ -60,7 +60,7 @@ module PostgresUpsert
           AND indisprimary
         sql
 
-        pg_result = conn.raw_connection.exec_params query
+        pg_result = conn.exec_params query
         pg_result.each{ |row| return row['attname'] }
       end
     end
@@ -68,7 +68,7 @@ module PostgresUpsert
     def column_names
       @column_names ||= begin
         query = "SELECT * FROM information_schema.columns WHERE TABLE_NAME = '#{@table_name}'"
-        pg_result = conn.raw_connection.exec_params query
+        pg_result = conn.exec_params query
         pg_result.map{ |row| row['column_name'] }
       end
     end
@@ -150,7 +150,7 @@ module PostgresUpsert
     end
 
     def update_from_temp_table
-      conn.raw_connection.exec_params <<-SQL
+      conn.exec_params <<-SQL
         UPDATE #{quoted_table_name} AS d
           #{update_set_clause}
           FROM #{@temp_table_name} as t
@@ -170,13 +170,13 @@ module PostgresUpsert
     def insert_from_temp_table
       columns_string = columns_string_for_insert
       select_string = select_string_for_insert
-      conn.raw_connection.exec_params <<-SQL
+      conn.exec_params <<-SQL
         INSERT INTO #{quoted_table_name} (#{columns_string})
           SELECT #{select_string}
           FROM #{@temp_table_name} as t
-          WHERE NOT EXISTS 
-            (SELECT 1 
-                  FROM #{quoted_table_name} as d 
+          WHERE NOT EXISTS
+            (SELECT 1
+                  FROM #{quoted_table_name} as d
                   WHERE d.#{@options[:key_column]} = t.#{@options[:key_column]})
           AND t.#{@options[:key_column]} IS NOT NULL;
       SQL
@@ -184,17 +184,17 @@ module PostgresUpsert
 
     def create_temp_table
       columns_string = select_string_for_create
-      conn.raw_connection.exec_params <<-SQL
+      conn.exec_params <<-SQL
         SET client_min_messages=WARNING;
         DROP TABLE IF EXISTS #{@temp_table_name};
 
-        CREATE TEMP TABLE #{@temp_table_name} 
+        CREATE TEMP TABLE #{@temp_table_name}
           AS SELECT #{columns_string} FROM #{quoted_table_name} WHERE 0 = 1;
       SQL
     end
 
     def drop_temp_table
-      conn.raw_connection.exec_params <<-SQL
+      conn.exec_params <<-SQL
         DROP TABLE #{@temp_table_name} 
       SQL
     end
