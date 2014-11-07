@@ -16,7 +16,7 @@ describe "pg_upsert from file with binary data" do
   end
 
   before do
-    PostgresUpsert::Writer.any_instance.stub(:now).and_return Time.parse("2012-01-01").utc
+    PostgresUpsert::Writer.any_instance.stub(:now).and_return timestamp
   end
 
   def timestamp
