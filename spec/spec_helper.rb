@@ -5,18 +5,21 @@ require 'postgres_upsert'
 require 'rspec'
 require 'rspec/autorun'
 
+def conn
+  @conn ||= PG::Connection.open(
+    :host     => "localhost",
+    :user     => "postgres",
+    :password => "postgres",
+    :port     => 5432,
+    :dbname   => "ar_pg_copy_test"
+  )
+end
+
 RSpec.configure do |config|
   config.before(:suite) do
     # we create a test database if it does not exist
     # I do not use database users or password for the tests, using ident authentication instead
     begin
-      conn = PG::Connection.open(
-        :host     => "localhost",
-        :user     => "postgres",
-        :password => "postgres",
-        :port     => 5432,
-        :dbname   => "ar_pg_copy_test"
-      )
       conn.exec_params %{
         SET client_min_messages TO warning;
         DROP TABLE IF EXISTS test_models;
