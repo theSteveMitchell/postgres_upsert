@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.name = "postgres_upsert"
   s.version = "3.0.0"
 
-  s.platform    = Gem::Platform::RUBY
+  s.platform    = 'java'
   s.required_ruby_version     = ">= 1.8.7"
   s.authors = ["Steve Mitchell"]
   s.date = "2014-09-12"
@@ -21,8 +21,9 @@ Gem::Specification.new do |s|
   s.homepage = "https://github.com/theSteveMitchell/postgres_upsert"
   s.require_paths = ["lib"]
   s.summary = "A rubygem that integrates with ActiveRecord to insert/update large data sets into the database efficiently"
+  s.license = "MIT"
 
-  s.add_dependency "pg", '~> 0.17.0'
+  s.add_dependency "activerecord-jdbcpostgresql-adapter"
   s.add_dependency "activerecord", '>= 3.0.0'
   s.add_dependency "rails", '>= 3.0.0'
   s.add_development_dependency "bundler"
