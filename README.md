@@ -4,6 +4,8 @@ Allows your  rails app to load data in a very fast way, avoiding calls to Active
 
 Using the PG gem and postgres's powerful COPY command, you can create thousands of rails objects in your db in a single query.
 
+## Compatibility Note
+The master branch requires the 'pg' gem which only supports MRI ruby.  the jruby branch requires 'activerecord-jdbcpostgresql-adapter' which, of course only supports JRuby.  Installation is the same whatever your platform.
 
 ## Install
 
