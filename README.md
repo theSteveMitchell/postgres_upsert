@@ -67,11 +67,20 @@ NOTE: binary files do not include header columns, so passing a :columns array is
 pg_upsert  supports 'upsert' or 'merge' operations.  In other words, the data source can contain both new and existing objects, and pg_upsert will handle either case.  Since the Postgres native COPY command does not handle updating existing records, pg_upsert accomplishes update and insert using an intermediary temp table:
 
 This merge/upsert happend in 5 steps (assume your data table is called "users")
-* create a temp table named users_temp_### where "###" is a random number.  In postgres temp tables are only visible to the current database session, so naming conflicts should not be a problem.
+* create a temp table named users_temp_123 where "123" is a randomly generated number.  In postgres temp tables are only visible to the current database session, so naming conflicts should not be a problem.  We add this random suffix just for fun.
 * COPY the data to user_temp
-* issue a query to insert all new records from users_temp_### into users (newness is determined by the presence of the primary key in the users table)
-* issue a query to update all records in users with the data in users_temp_### (matching on primary key)
+* issue a query to insert all new records from users_temp_123 into users ("new" records are those records whos primary key does not already exist in the users)
+* issue a query to update all existing records in users with the data in users_temp_123 ("existing" records are those whose primary key already exists in the users table)
 * drop the temp table.
+
+### timestamp columns
+
+currently pg_upsert detects and manages the default rails timestamp columns created_at and updated_at.  If these fields exist in your destination table, pg_upsert will keep these current as expected
+
+* newly inserted records get a current timestamp for created_at
+* records existing in the source file/IO will get an update to their updated_at timestamp (even if all fields maintain the same value)
+* records that are in the destination table but not the source will not have their timestamps changed.
+
 
 ### overriding the key_column
 
