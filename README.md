@@ -75,7 +75,7 @@ This merge/upsert happend in 5 steps (assume your data table is called "users")
 
 ### timestamp columns
 
-currently pg_upsert detects and manages the default rails timestamp columns created_at and updated_at.  If these fields exist in your destination table, pg_upsert will keep these current as expected
+currently pg_upsert detects and manages the default rails timestamp columns created_at and updated_at.  If these fields exist in your destination table, pg_upsert will keep these current as expected.  I recommend you do NOT include these fields in your source CSV/IO, as pg_upsert will not honor them.
 
 * newly inserted records get a current timestamp for created_at
 * records existing in the source file/IO will get an update to their updated_at timestamp (even if all fields maintain the same value)
