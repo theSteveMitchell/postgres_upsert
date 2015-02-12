@@ -8,7 +8,6 @@ Gem::Specification.new do |s|
   s.version = "3.0.0"
 
   s.platform    = 'java'
-  s.required_ruby_version     = ">= 1.8.7"
   s.authors = ["Steve Mitchell"]
   s.date = "2014-09-12"
   s.description = "Uses Postgres's powerful COPY command to upsert large sets of data into ActiveRecord tables"
@@ -24,6 +23,7 @@ Gem::Specification.new do |s|
   s.license = "MIT"
 
   s.add_dependency "activerecord-jdbcpostgresql-adapter"
+  s.add_dependency "sequel"
   s.add_dependency "activerecord", '>= 3.0.0'
   s.add_dependency "rails", '>= 3.0.0'
   s.add_development_dependency "bundler"

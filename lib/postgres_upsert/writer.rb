@@ -1,3 +1,6 @@
+require 'sequel'
+
+
 module PostgresUpsert
 
   class Writer
@@ -25,18 +28,23 @@ module PostgresUpsert
       copy_table = @temp_table_name
 
       columns_string = columns_string_for_copy
-      create_temp_table
 
-      ActiveRecord::Base.connection.raw_connection.copy_data %{COPY #{copy_table} #{columns_string} FROM STDIN #{csv_options}} do
+      base_connection = Sequel.connect(ActiveRecord::Base.connection.config[:url])
 
+      base_connection.synchronize do |connection|
+        create_temp_table(connection)
+        copy_manager = org.postgresql.copy.CopyManager.new(connection)
+        stream = copy_manager.copy_in("COPY #{copy_table} #{columns_string} FROM STDIN WITH #{csv_options}")
         while line = read_input_line do
           next if line.strip.size == 0
-          ActiveRecord::Base.connection.raw_connection.put_copy_data line
+          line = line.to_java_bytes
+          stream.write_to_copy(line, 0, line.length)
         end
+        stream.end_copy
+        upsert_from_temp_table(connection)
+        drop_temp_table(connection)
       end
 
-      upsert_from_temp_table
-      drop_temp_table
     end
 
   private
@@ -140,13 +148,13 @@ module PostgresUpsert
       end
     end
 
-    def upsert_from_temp_table
-      update_from_temp_table
-      insert_from_temp_table unless @options[:update_only]
+    def upsert_from_temp_table(connection)
+      update_from_temp_table(connection)
+      insert_from_temp_table(connection) unless @options[:update_only]
     end
 
-    def update_from_temp_table
-      ActiveRecord::Base.connection.execute <<-SQL
+    def update_from_temp_table(connection)
+      connection.execSQLUpdate <<-SQL
         UPDATE #{quoted_table_name} AS d
           #{update_set_clause}
           FROM #{@temp_table_name} as t
@@ -163,10 +171,10 @@ module PostgresUpsert
       "SET #{command.join(',')}"
     end
 
-    def insert_from_temp_table
+    def insert_from_temp_table(connection)
       columns_string = columns_string_for_insert
       select_string = select_string_for_insert
-      ActiveRecord::Base.connection.execute <<-SQL
+      connection.execSQLUpdate <<-SQL
         INSERT INTO #{quoted_table_name} (#{columns_string})
           SELECT #{select_string}
           FROM #{@temp_table_name} as t
@@ -178,9 +186,9 @@ module PostgresUpsert
       SQL
     end
 
-    def create_temp_table
+    def create_temp_table(connection)
       columns_string = select_string_for_create
-      ActiveRecord::Base.connection.execute <<-SQL
+      connection.execSQLUpdate <<-SQL
         SET client_min_messages=WARNING;
         DROP TABLE IF EXISTS #{@temp_table_name};
 
@@ -189,8 +197,8 @@ module PostgresUpsert
       SQL
     end
 
-    def drop_temp_table
-      ActiveRecord::Base.connection.execute <<-SQL
+    def drop_temp_table(connection)
+      connection.execSQLUpdate <<-SQL
         DROP TABLE #{@temp_table_name} 
       SQL
     end
