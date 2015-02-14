@@ -26,8 +26,8 @@ Gem::Specification.new do |s|
   s.add_dependency "activerecord", '>= 3.0.0'
   s.add_dependency "rails", '>= 3.0.0'
   s.add_development_dependency "bundler"
-  s.add_development_dependency "rdoc"
   s.add_development_dependency "pry-rails"
   s.add_development_dependency "rspec", "~> 2.12"
+  s.add_development_dependency "rspec-rails", "~> 2.0"
 end
 
