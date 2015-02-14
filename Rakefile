@@ -1,18 +1,6 @@
-# -*- encoding: utf-8 -*-
-$:.unshift File.expand_path("../lib", __FILE__)
-require 'bundler/gem_tasks'
-require 'rubygems'
-require 'rspec/core/rake_task'
-require 'rdoc/task'
+# Add your own tasks in files placed in lib/tasks ending in .rake,
+# for example lib/tasks/capistrano.rake, and they will automatically be available to Rake.
 
-task :default => :spec
+require File.expand_path('../config/application', __FILE__)
 
-RSpec::Core::RakeTask.new(:spec)
-
-Rake::RDocTask.new do |rdoc|
-  version = File.exist?('VERSION') ? File.read('VERSION') : ""
-  rdoc.rdoc_dir = 'rdoc'
-  rdoc.title = "postgres_upsert #{version}"
-  rdoc.rdoc_files.include('README*')
-  rdoc.rdoc_files.include('lib/**/*.rb')
-end
+Rails.application.load_tasks
