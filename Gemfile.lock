@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    postgres_upsert (3.0.0-java)
+    postgres_upsert (3.1.0-java)
       activerecord (>= 3.0.0)
       activerecord-jdbcpostgresql-adapter
       rails (>= 3.0.0)

@@ -7,6 +7,8 @@ require 'rspec'
 require 'rspec/autorun'
 
 RSpec.configure do |config|
+  config.use_transactional_fixtures = false
+
   config.before(:suite) do
     # we create a test database if it does not exist
     # I do not use database users or password for the tests, using ident authentication instead

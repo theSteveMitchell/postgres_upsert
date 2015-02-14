@@ -1,5 +1,3 @@
-require 'sequel'
-
 
 module PostgresUpsert
 
@@ -7,6 +5,7 @@ module PostgresUpsert
 
     def initialize(table_name, source, options = {})
       @table_name = table_name
+      @connection ||= ActiveRecord::Base.connection_pool.checkout.raw_connection.connection
       @options = options.reverse_merge({
         :delimiter => ",", 
         :format => :csv, 
@@ -19,6 +18,8 @@ module PostgresUpsert
     end
 
     def write
+      import org.postgresql.copy.CopyManager
+
       if @columns_list.empty? 
         raise "Either the :columns option or :header => true are required"
       end
@@ -28,22 +29,21 @@ module PostgresUpsert
       copy_table = @temp_table_name
 
       columns_string = columns_string_for_copy
-
-      base_connection = Sequel.connect(ActiveRecord::Base.connection.config[:url])
-
-      base_connection.synchronize do |connection|
-        create_temp_table(connection)
-        copy_manager = org.postgresql.copy.CopyManager.new(connection)
-        stream = copy_manager.copy_in("COPY #{copy_table} #{columns_string} FROM STDIN WITH #{csv_options}")
-        while line = read_input_line do
-          next if line.strip.size == 0
-          line = line.to_java_bytes
-          stream.write_to_copy(line, 0, line.length)
-        end
-        stream.end_copy
-        upsert_from_temp_table(connection)
-        drop_temp_table(connection)
+      create_temp_table
+      require 'pry'; binding.pry
+      copy_manager = copy_manager = CopyManager.new(@connection)
+      stream = copy_manager.copy_in("COPY #{copy_table} #{columns_string} FROM STDIN WITH #{csv_options}")
+      
+      while line = read_input_line do
+        next if line.strip.size == 0
+        line = line.to_java_bytes
+        stream.write_to_copy(line, 0, line.length)
       end
+      stream.end_copy
+      require 'pry'; binding.pry
+      upsert_from_temp_table
+      drop_temp_table
+      
 
     end
 
@@ -64,15 +64,16 @@ module PostgresUpsert
           AND indisprimary
         sql
 
-        pg_result = ActiveRecord::Base.connection.execute query
-        pg_result.each{ |row| return row['attname'] }
+        pg_result = @connection.execSQLQuery query
+        pg_result.next
+        pg_result.getString(1)
       end
     end
 
     def column_names
       @column_names ||= begin
         query = "SELECT * FROM information_schema.columns WHERE TABLE_NAME = '#{@table_name}'"
-        pg_result = ActiveRecord::Base.connection.execute query
+        pg_result = @connection.execSQLUpdate query
         pg_result.map{ |row| row['column_name'] }
       end
     end
@@ -129,7 +130,7 @@ module PostgresUpsert
     end
 
     def quoted_table_name
-      @quoted_table_name ||= ActiveRecord::Base.connection.quote_table_name(@table_name)
+      @quoted_table_name ||= "'#{@table_name}'"
     end
 
     def generate_temp_table_name
@@ -148,13 +149,14 @@ module PostgresUpsert
       end
     end
 
-    def upsert_from_temp_table(connection)
-      update_from_temp_table(connection)
-      insert_from_temp_table(connection) unless @options[:update_only]
+    def upsert_from_temp_table
+      update_from_temp_table
+      insert_from_temp_table unless @options[:update_only]
     end
 
-    def update_from_temp_table(connection)
-      connection.execSQLUpdate <<-SQL
+    def update_from_temp_table
+      require 'pry'; binding.pry
+      @connection.execSQLUpdate <<-SQL
         UPDATE #{quoted_table_name} AS d
           #{update_set_clause}
           FROM #{@temp_table_name} as t
@@ -171,10 +173,11 @@ module PostgresUpsert
       "SET #{command.join(',')}"
     end
 
-    def insert_from_temp_table(connection)
+    def insert_from_temp_table
+      require 'pry'; binding.pry
       columns_string = columns_string_for_insert
       select_string = select_string_for_insert
-      connection.execSQLUpdate <<-SQL
+      @connection.execSQLUpdate <<-SQL
         INSERT INTO #{quoted_table_name} (#{columns_string})
           SELECT #{select_string}
           FROM #{@temp_table_name} as t
@@ -186,9 +189,9 @@ module PostgresUpsert
       SQL
     end
 
-    def create_temp_table(connection)
+    def create_temp_table
       columns_string = select_string_for_create
-      connection.execSQLUpdate <<-SQL
+      @connection.execSQLUpdate <<-SQL
         SET client_min_messages=WARNING;
         DROP TABLE IF EXISTS #{@temp_table_name};
 
