@@ -3,14 +3,13 @@ module PostgresUpsert
 
   class Writer
 
-    def initialize(table_name, source, options = {})
-      @table_name = table_name
-      @connection ||= ActiveRecord::Base.connection_pool.checkout.raw_connection.connection
+    def initialize(klass, source, options = {})
+      @klass = klass
       @options = options.reverse_merge({
         :delimiter => ",", 
         :format => :csv, 
         :header => true, 
-        :key_column => primary_key,
+        :key_column => @klass.primary_key,
         :update_only => false})
       @source = source.instance_of?(String) ? File.open(source, 'r') : source
       @columns_list = get_columns
@@ -29,54 +28,26 @@ module PostgresUpsert
       copy_table = @temp_table_name
 
       columns_string = columns_string_for_copy
-      create_temp_table
-      require 'pry'; binding.pry
-      copy_manager = copy_manager = CopyManager.new(@connection)
-      stream = copy_manager.copy_in("COPY #{copy_table} #{columns_string} FROM STDIN WITH #{csv_options}")
       
-      while line = read_input_line do
-        next if line.strip.size == 0
-        line = line.to_java_bytes
-        stream.write_to_copy(line, 0, line.length)
+      ActiveRecord::Base.connection_pool.with_connection do |conn|
+
+        create_temp_table(conn)
+        copy_manager = CopyManager.new(conn.raw_connection.connection)
+        stream = copy_manager.copy_in("COPY #{copy_table} #{columns_string} FROM STDIN WITH #{csv_options}")
+        
+        while line = read_input_line do
+          next if line.strip.size == 0
+          line = line.to_java_bytes
+          stream.write_to_copy(line, 0, line.length)
+        end
+        stream.end_copy
+        upsert_from_temp_table(conn)
+        drop_temp_table(conn)
       end
-      stream.end_copy
-      require 'pry'; binding.pry
-      upsert_from_temp_table
-      drop_temp_table
-      
 
     end
 
   private
-
-    def primary_key
-      @primary_key ||= begin
-        query = <<-sql
-          SELECT
-            pg_attribute.attname,
-            format_type(pg_attribute.atttypid, pg_attribute.atttypmod)
-          FROM pg_index, pg_class, pg_attribute
-          WHERE
-            pg_class.oid = '#{@table_name}'::regclass AND
-            indrelid = pg_class.oid AND
-            pg_attribute.attrelid = pg_class.oid AND
-            pg_attribute.attnum = any(pg_index.indkey)
-          AND indisprimary
-        sql
-
-        pg_result = @connection.execSQLQuery query
-        pg_result.next
-        pg_result.getString(1)
-      end
-    end
-
-    def column_names
-      @column_names ||= begin
-        query = "SELECT * FROM information_schema.columns WHERE TABLE_NAME = '#{@table_name}'"
-        pg_result = @connection.execSQLUpdate query
-        pg_result.map{ |row| row['column_name'] }
-      end
-    end
 
     def get_columns
       columns_list = @options[:columns] || []
@@ -98,23 +69,23 @@ module PostgresUpsert
 
     def columns_string_for_select
       columns = @columns_list.clone
-      columns << "created_at" if column_names.include?("created_at")
-      columns << "updated_at" if column_names.include?("updated_at")
+      columns << "created_at" if @klass.column_names.include?("created_at")
+      columns << "updated_at" if @klass.column_names.include?("updated_at")
       str = get_columns_string(columns)
     end
 
     def columns_string_for_insert
       columns = @columns_list.clone
-      columns << "created_at" if column_names.include?("created_at")
-      columns << "updated_at" if column_names.include?("updated_at")
+      columns << "created_at" if @klass.column_names.include?("created_at")
+      columns << "updated_at" if @klass.column_names.include?("updated_at")
       str = get_columns_string(columns)
     end
 
     def select_string_for_insert
       columns = @columns_list.clone
       str = get_columns_string(columns)
-      str << ",'#{DateTime.now.utc}'" if column_names.include?("created_at")
-      str << ",'#{DateTime.now.utc}'" if column_names.include?("updated_at")
+      str << ",'#{DateTime.now.utc}'" if @klass.column_names.include?("created_at")
+      str << ",'#{DateTime.now.utc}'" if @klass.column_names.include?("updated_at")
       str
     end
 
@@ -129,12 +100,16 @@ module PostgresUpsert
       columns.size > 0 ? "\"#{columns.join('","')}\"" : ""
     end
 
-    def quoted_table_name
-      @quoted_table_name ||= "'#{@table_name}'"
+    def get_table_name
+      if @options[:table]
+        connection.quote_table_name(@options[:table])
+      else
+        @klass.quoted_table_name
+      end
     end
 
     def generate_temp_table_name
-      @temp_table_name = "#{@table_name}_temp_#{rand(1000)}"
+      @temp_table_name = "#{@klass.table_name}_temp_#{rand(1000)}"
     end
 
     def read_input_line
@@ -149,15 +124,14 @@ module PostgresUpsert
       end
     end
 
-    def upsert_from_temp_table
-      update_from_temp_table
-      insert_from_temp_table unless @options[:update_only]
+    def upsert_from_temp_table(conn)
+      update_from_temp_table(conn)
+      insert_from_temp_table(conn) unless @options[:update_only]
     end
 
-    def update_from_temp_table
-      require 'pry'; binding.pry
-      @connection.execSQLUpdate <<-SQL
-        UPDATE #{quoted_table_name} AS d
+    def update_from_temp_table(conn)
+      conn.execute <<-SQL
+        UPDATE #{get_table_name} AS d
           #{update_set_clause}
           FROM #{@temp_table_name} as t
           WHERE t.#{@options[:key_column]} = d.#{@options[:key_column]}
@@ -169,39 +143,38 @@ module PostgresUpsert
       command = @columns_list.map do |col|
         "\"#{col}\" = t.\"#{col}\""
       end
-      command << "\"updated_at\" = '#{DateTime.now.utc}'" if column_names.include?("updated_at")
+      command << "\"updated_at\" = '#{DateTime.now.utc}'" if @klass.column_names.include?("updated_at")
       "SET #{command.join(',')}"
     end
 
-    def insert_from_temp_table
-      require 'pry'; binding.pry
+    def insert_from_temp_table(conn)
       columns_string = columns_string_for_insert
       select_string = select_string_for_insert
-      @connection.execSQLUpdate <<-SQL
-        INSERT INTO #{quoted_table_name} (#{columns_string})
+      conn.execute <<-SQL
+        INSERT INTO #{get_table_name} (#{columns_string})
           SELECT #{select_string}
           FROM #{@temp_table_name} as t
           WHERE NOT EXISTS 
             (SELECT 1 
-                  FROM #{quoted_table_name} as d 
+                  FROM #{get_table_name} as d 
                   WHERE d.#{@options[:key_column]} = t.#{@options[:key_column]})
           AND t.#{@options[:key_column]} IS NOT NULL;
       SQL
     end
 
-    def create_temp_table
+    def create_temp_table(conn)
       columns_string = select_string_for_create
-      @connection.execSQLUpdate <<-SQL
+      conn.execute <<-SQL
         SET client_min_messages=WARNING;
         DROP TABLE IF EXISTS #{@temp_table_name};
 
         CREATE TEMP TABLE #{@temp_table_name} 
-          AS SELECT #{columns_string} FROM #{quoted_table_name} WHERE 0 = 1;
+          AS SELECT #{columns_string} FROM #{get_table_name} WHERE 0 = 1;
       SQL
     end
 
-    def drop_temp_table(connection)
-      connection.execSQLUpdate <<-SQL
+    def drop_temp_table(conn)
+      conn.execute <<-SQL
         DROP TABLE #{@temp_table_name} 
       SQL
     end
