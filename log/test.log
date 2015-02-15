@@ -1,8 +1,0 @@
-  [1m[36m (0.0ms)[0m  [1mSELECT version()[0m
-  [1m[35m (3.0ms)[0m  SELECT COUNT(*) FROM "test_models"
-  [1m[36m (1.0ms)[0m  [1mselect * from test_models[0m
-  [1m[35m (6.0ms)[0m  describe test_models
-ActiveRecord::JDBCError: org.postgresql.util.PSQLException: ERROR: syntax error at or near "describe"
-  Position: 1: describe test_models
-  [1m[36m (1.0ms)[0m  [1mselect * from test_models[0m
-  [1m[36m (1.0ms)[0m  [1mselect * from test_models[0m
