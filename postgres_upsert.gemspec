@@ -5,7 +5,7 @@ $:.unshift lib unless $:.include?(lib)
 
 Gem::Specification.new do |s|
   s.name = "postgres_upsert"
-  s.version = "3.1.0"
+  s.version = "3.2.0"
 
   s.platform    = 'java'
   s.authors = ["Steve Mitchell"]
