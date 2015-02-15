@@ -5,9 +5,9 @@ class CreateTestTables < ActiveRecord::Migration
       t.timestamps
     end
 
-    create_table :three_column do |t|
+    create_table :three_columns do |t|
       t.string :data
-      t.string :extra_data
+      t.string :extra
       t.timestamps
     end
 

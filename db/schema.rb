@@ -22,7 +22,7 @@ ActiveRecord::Schema.define(version: 20150214192135) do
 # Could not dump table "test_models" because of following NoMethodError
 #   undefined method `[]' for nil:NilClass
 
-# Could not dump table "three_column" because of following NoMethodError
+# Could not dump table "three_columns" because of following NoMethodError
 #   undefined method `[]' for nil:NilClass
 
 end

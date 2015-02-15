@@ -1,12 +1,6 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 
 describe "pg_upsert from file with binary data" do
-  before(:each) do
-    ActiveRecord::Base.connection.execute %{
-      TRUNCATE TABLE test_models;
-      SELECT setval('test_models_id_seq', 1, false);
-    }
-  end
 
   before do
     DateTime.stub(:now).and_return (DateTime.parse("2012-01-01").utc)
