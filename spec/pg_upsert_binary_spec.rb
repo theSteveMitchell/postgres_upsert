@@ -3,11 +3,12 @@ require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 describe "pg_upsert from file with binary data" do
 
   before do
-    DateTime.stub(:now).and_return (DateTime.parse("2012-01-01").utc)
+    TestModel.delete_all
+    DateTime.stub_chain(:now, :utc).and_return (DateTime.parse("2012-01-01").utc)
   end
 
   def timestamp
-    DateTime.now.utc.to_s
+    DateTime.now.utc
   end
 
   it "imports from file if path is passed without field_map" do
