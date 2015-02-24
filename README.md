@@ -19,7 +19,7 @@ Run the bundle command
 
 ## Usage
 
-The gem will add the aditiontal class method to ActiveRecord::Base
+The gem will add the additional class method to ActiveRecord::Base
 
 * pg_upsert io_object_or_file_path, [options]
 
