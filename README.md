@@ -89,6 +89,62 @@ obviously, the field you pass must be a unique key in your database (this is not
 
 passing :update_only = true will ensure that no new records are created, but records will be updated.
 
+### Benchmarks!
+
+Given a User model, (validates presence of email and paassword)
+```console
+2.1.3 :008 > User
+ => User(id: integer, email: string, password: string, created_at: datetime, updated_at: datetime) 
+```
+
+And the following railsy code to create 10,000 users:
+```ruby
+def dumb
+    time = Benchmark.measure do
+      (1..10000).each do |n|
+        User.create!(:email => "number#{n}@postgres.up", :password => "#{(n-5..n).to_a.join('')}")
+      end
+    end
+  puts time
+end
+```
+
+Compared to the following code using Postgres_upsert:
+```ruby
+def self.smart
+    time = Benchmark.measure do
+      csv_string = CSV.generate do |csv|
+        csv << %w(email password)
+        (1..10000).each do |n|
+          csv << ["number#{n}@postgres.up", "#{(n-5..n).to_a.join('')}"]
+        end
+      end
+      io = StringIO.new(csv_string)
+      User.pg_upsert io, key_column: "email"
+    end
+    puts time
+end
+```
+
+let's compare!
+
+```console
+2.1.3 :002 > dumb
+   #...snip  ~30k lines of output :( (10k queries, each wrapped in a transaction)
+   (0.3ms)  COMMIT
+26.639246
+2.1.3 :004 > User.delete_all
+  SQL (15.4ms)  DELETE FROM "users"
+2.1.3 :006 > smart
+   #...snip ~30 lines of output, composing 5 sql queries...
+0.275503
+```
+
+...That's 26.6 seconds for classic create loop... vs. 0.276 seconds for postgres_upsert.  
+This is over 96X faster.  And it only cost me ~6 extra lines of code.
+
+Note that for the benchmark, my database is local.  The performance improvement should only increase when we have network latency to worry about.
+
 ## Note on Patches/Pull Requests
 
 * Fork the project
