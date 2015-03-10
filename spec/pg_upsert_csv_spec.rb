@@ -202,5 +202,16 @@ describe "pg_upsert from file with CSV format" do
     end
 
   end
+
+  context 'using table_name' do
+    it "should import from file if path is passed without field_map" do
+      PostgresUpsert.write TestModel.table_name, File.expand_path('spec/fixtures/comma_with_header.csv')
+      expect(
+        TestModel.first.attributes
+      ).to include('data' => 'test data 1', 'created_at' => timestamp, 'updated_at' => timestamp)
+    end
+
+
+  end
 end
 
