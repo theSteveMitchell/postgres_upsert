@@ -2,17 +2,8 @@ class PostgresDumbWriter < PostgresWriter
 
   def initialize(table_name, source, options = {})
     @table_name = table_name
-    @options = options.reverse_merge({
-      :delimiter => ",", 
-      :format => :csv, 
-      :header => true, 
-      :key_column => primary_key,
-      :update_only => false})
-    @source = source.instance_of?(String) ? File.open(source, 'r') : source
-    @columns_list = get_columns
-    generate_temp_table_name
+    super(nil, source, options)
   end
-
 
 private
 
@@ -47,5 +38,5 @@ private
   def quoted_table_name
     @quoted_table_name ||= ActiveRecord::Base.connection.quote_table_name(@table_name)
   end
-  
+
 end

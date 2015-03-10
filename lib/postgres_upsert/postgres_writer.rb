@@ -21,7 +21,6 @@ class PostgresWriter
     csv_options = @options[:format] == :binary ? "BINARY" : "DELIMITER '#{@options[:delimiter]}' CSV"
 
     copy_table = @temp_table_name
-
     columns_string = columns_string_for_copy
     create_temp_table
 
@@ -45,6 +44,10 @@ private
 
   def column_names
     @klass.column_names
+  end
+
+  def quoted_table_name
+    @klass.quoted_table_name
   end
 
   def get_columns
@@ -96,10 +99,6 @@ private
   def get_columns_string(columns = nil)
     columns ||= @columns_list
     columns.size > 0 ? "\"#{columns.join('","')}\"" : ""
-  end
-
-  def quoted_table_name
-    @klass.quoted_table_name
   end
 
   def generate_temp_table_name
