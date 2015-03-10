@@ -1,14 +1,14 @@
 require 'rubygems'
 require 'active_record'
-require 'postgres_upsert/active_record'
-require 'postgres_upsert/writer'
+require 'postgres_upsert/postgres_writer'
+require 'postgres_upsert/postgres_dumb_writer'
 require 'rails'
 
-class PostgresCopy < Rails::Railtie
+class PostgresUpsert < Rails::Railtie
 
-  initializer 'postgres_upsert' do
-    ActiveSupport.on_load :active_record do
-      require "postgres_upsert/active_record"
-    end
+  def self.write class_or_table, path_or_io, options = {}
+    writer = class_or_table.is_a?(String) ?  
+       PostgresDumbWriter : PostgresWriter
+    writer.new(class_or_table, path_or_io, options).write
   end
 end

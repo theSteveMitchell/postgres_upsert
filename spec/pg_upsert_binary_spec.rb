@@ -12,7 +12,7 @@ describe "pg_upsert from file with binary data" do
   end
 
   it "imports from file if path is passed without field_map" do
-    TestModel.pg_upsert File.expand_path('spec/fixtures/2_col_binary_data.dat'), :format => :binary, columns: [:id, :data]
+    PostgresUpsert.write TestModel, File.expand_path('spec/fixtures/2_col_binary_data.dat'), :format => :binary, columns: [:id, :data]
 
     expect(
       TestModel.first.attributes
@@ -22,7 +22,7 @@ describe "pg_upsert from file with binary data" do
   it "throws an error when importing binary file without columns list" do
     # Since binary data never has a header row, we'll require explicit columns list
     expect{
-      TestModel.pg_upsert File.expand_path('spec/fixtures/2_col_binary_data.dat'), :format => :binary
+      PostgresUpsert.write TestModel, File.expand_path('spec/fixtures/2_col_binary_data.dat'), :format => :binary
     }.to raise_error "Either the :columns option or :header => true are required"
   end
 
