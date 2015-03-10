@@ -180,7 +180,7 @@ describe "pg_upsert from file with CSV format" do
       ThreeColumn.pg_upsert(file, :key_column => "data")
       expect(
         ThreeColumn.last.attributes
-      ).to include("id" => 1, "data" => "old stuff", "extra" => "ABC: Always Be Changing.")
+      ).to include("data" => "old stuff", "extra" => "ABC: Always Be Changing.")
     end
   end
 
