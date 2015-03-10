@@ -4,7 +4,6 @@ class PostgresWriter
     @klass = klass
     @options = options.reverse_merge({
       :delimiter => ",", 
-      :format => :csv, 
       :header => true, 
       :key_column => primary_key,
       :update_only => false})
@@ -18,7 +17,7 @@ class PostgresWriter
       raise "Either the :columns option or :header => true are required"
     end
 
-    csv_options = @options[:format] == :binary ? "BINARY" : "DELIMITER '#{@options[:delimiter]}' CSV"
+    csv_options = "DELIMITER '#{@options[:delimiter]}' CSV"
 
     copy_table = @temp_table_name
     columns_string = columns_string_for_copy
@@ -26,7 +25,7 @@ class PostgresWriter
 
     ActiveRecord::Base.connection.raw_connection.copy_data %{COPY #{copy_table} #{columns_string} FROM STDIN #{csv_options}} do
 
-      while line = read_input_line do
+      while line = @source.gets do
         next if line.strip.size == 0
         ActiveRecord::Base.connection.raw_connection.put_copy_data line
       end
@@ -52,12 +51,12 @@ private
 
   def get_columns
     columns_list = @options[:columns] || []
-    if @options[:format] != :binary && @options[:header]
+    if @options[:header]
       #if header is present, we need to strip it from io, whether we use it for the columns list or not.
       line = @source.gets
-        if columns_list.empty?
-          columns_list = line.strip.split(@options[:delimiter])
-        end
+      if columns_list.empty?
+        columns_list = line.strip.split(@options[:delimiter])
+      end
     end
     columns_list = columns_list.map{|c| @options[:map][c.to_s] } if @options[:map]
     return columns_list
@@ -103,18 +102,6 @@ private
 
   def generate_temp_table_name
     @temp_table_name = "#{@table_name}_temp_#{rand(1000)}"
-  end
-
-  def read_input_line
-    if @options[:format] == :binary
-      begin
-        return @source.readpartial(10240)
-      rescue EOFError
-      end
-    else
-      line = @source.gets
-      return line
-    end
   end
 
   def upsert_from_temp_table

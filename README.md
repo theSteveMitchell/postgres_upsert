@@ -27,7 +27,6 @@ io_object_or_file_path => is a file path or an io object (StringIO, FileIO, etc.
 
 options:
 - :delimiter - the string to use to delimit fields.  Default is ","
-- :format - the format of the file (valid formats are :csv or :binary).  Default is :csv
 - :header => specifies if the file/io source contains a header row.  Either :header option must be true, or :columns list must be passed.  Default true
 - :key_column => the primary key or unique key column on your ActiveRecord table, used to distinguish new records from existing records.  Default is the primary_key of your ActiveRecord model class.
 - :update_only => when true, postgres_upsert will ONLY update existing records, and not insert new.  Default is false.
@@ -47,16 +46,6 @@ If the column names in the CSV header do not match the field names of the target
 User.pg_upsert "/tmp/users.csv", :map => {'name' => 'first_name'}
 ```
 The header name in the CSV file will be mapped to the field called first_name in the users table.
-
-To copy a binary formatted data file or IO object, you can specify the format as binary:
-```ruby
-User.pg_upsert "/tmp/users.dat", :format => :binary, :columns => ["id, "name"]
-```
-Which will generate the following SQL command:
-```sql
-COPY users (id, name) FROM '/tmp/users.dat' WITH BINARY
-```
-NOTE: binary files do not include a header row, so passing a :columns array is required for binary files.
 
 
 pg_upsert  supports the 'merge' operation, which is not yet natively supported in Postgres.  The data can include both new and existing records, and pg_upsert will handle either update or insert of each record appropriately.  Since the Postgres COPY command does not handle this, pg_upsert accomplishes it using an intermediary temp table:
@@ -82,7 +71,7 @@ currently pg_upsert detects and manages the default rails timestamp columns `cre
 By default pg_upsert uses the primary key on your ActiveRecord table to determine if each record should be inserted or updated.  You can override the column using the :key_field option:
 
 ```ruby
-User.pg_upsert "/tmp/users.dat", :format => :binary, :key_column => ["external_twitter_id"]
+User.pg_upsert "/tmp/users.csv", :key_column => ["external_twitter_id"]
 ```
 
 obviously, the field you pass must be a unique key in your database (this is not enforced at the moment, but will be)

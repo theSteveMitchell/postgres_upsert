@@ -37,12 +37,6 @@ describe "pg_upsert from file with CSV format" do
     }.to raise_error
   end
 
-  it "throws error if the csv has mixed delimiters" do
-    expect{
-      PostgresUpsert.write TestModel, File.expand_path('spec/fixtures/tab_with_error.csv'), :delimiter => "\t"
-    }.to raise_error
-  end
-
   it "should import from IO without field_map" do
     PostgresUpsert.write TestModel, File.open(File.expand_path('spec/fixtures/comma_with_header.csv'), 'r')
     expect(
@@ -130,7 +124,7 @@ describe "pg_upsert from file with CSV format" do
 
     it "should require columns option if no header" do
       expect{
-        PostgresUpsert.write TestModel, File.expand_path('spec/fixtures/2_col_binary_data.dat'), :format => :binary
+        PostgresUpsert.write TestModel, File.expand_path('spec/fixtures/comma_without_header.csv'), :header => false
       }.to raise_error("Either the :columns option or :header => true are required")
     end
 
