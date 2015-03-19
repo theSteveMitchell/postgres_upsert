@@ -1,4 +1,4 @@
-# postgres_upsert
+# postgres_upsert [![Build Status](https://travis-ci.org/theSteveMitchell/postgres_upsert.svg?branch=master)](https://travis-ci.org/theSteveMitchell/postgres_upsert)
 
 Allows your  rails app to load data in a very fast way, avoiding calls to ActiveRecord.
 
