@@ -66,7 +66,7 @@ currently postgres_upsert detects and manages the default rails timestamp column
 * records that are in the destination table but not the source will not have their timestamps changed.
 
 
-### overriding the key_column
+### Overriding the key_column
 
 By default postgres_upsert uses the primary key on your ActiveRecord table to determine if each record should be inserted or updated.  You can override the column using the :key_field option:
 
@@ -89,6 +89,9 @@ result.inserted
 result.updated
 # => 0
 ```
+
+### Huge Caveat!
+Since postgres_upsert does not use validations or even instantiate rails objects, you can get invalid data if you're not careful.  Postgres upsert assumes that your source data is minimally cleaned up, and will not tell you if any data is invalid based on rails model rules.  It will, of course raise an error if data does not conform to your database constraints.
 
 ### Benchmarks!
 
