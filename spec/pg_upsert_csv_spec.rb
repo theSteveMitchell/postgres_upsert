@@ -173,7 +173,6 @@ describe "pg_upsert from file with CSV format" do
       three_col = ThreeColumn.create(id: 1, data: "old stuff", extra: "neva change!")
       file = File.open(File.expand_path('spec/fixtures/no_id.csv'), 'r')
 
-
       PostgresUpsert.write(ThreeColumn, file, :key_column => "data")
       expect(
         three_col.reload.extra
@@ -188,6 +187,15 @@ describe "pg_upsert from file with CSV format" do
         ThreeColumn.last.attributes
       ).to include("data" => "old stuff", "extra" => "ABC: Always Be Changing.")
     end
+
+    it 'raises an error if the expected key column is not in data' do
+      file = File.open(File.expand_path('spec/fixtures/no_id.csv'), 'r')
+
+      expect{
+      PostgresUpsert.write(ThreeColumn, file, :header => true)
+      }.to raise_error (/Expected a unique column 'id'/)
+    end
+
   end
 
   context 'update only' do
@@ -229,7 +237,9 @@ describe "pg_upsert from file with CSV format" do
     end
 
     it "should still report results" do
+      TestModel.create(data: "test data 1")
       result = result = PostgresUpsert.write TestModel.table_name, File.expand_path('spec/fixtures/tab_with_two_lines.csv'), :delimiter => "\t"
+
       expect(
         result.updated
       ).to eq(1)

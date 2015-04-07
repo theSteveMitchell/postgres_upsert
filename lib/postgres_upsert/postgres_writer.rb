@@ -51,7 +51,7 @@ private
   end
 
   def get_columns
-    columns_list = @options[:columns] || []
+    columns_list = @options[:columns] ? @options[:columns].map(&:to_s) : []
     if @options[:header]
       #if header is present, we need to strip it from io, whether we use it for the columns list or not.
       line = @source.gets
@@ -145,6 +145,7 @@ private
 
   def create_temp_table
     columns_string = select_string_for_create
+    verify_temp_has_key
     ActiveRecord::Base.connection.execute <<-SQL
       SET client_min_messages=WARNING;
       DROP TABLE IF EXISTS #{@temp_table_name};
@@ -152,6 +153,12 @@ private
       CREATE TEMP TABLE #{@temp_table_name} 
         AS SELECT #{columns_string} FROM #{quoted_table_name} WHERE 0 = 1;
     SQL
+  end
+
+  def verify_temp_has_key
+    unless @columns_list.include?(@options[:key_column])
+      raise "Expected a unique column '#{@options[:key_column]}' but the source data does not include this column.  Update the :columns list or explicitly set the :key_column option.}"
+    end
   end
 
   def drop_temp_table
