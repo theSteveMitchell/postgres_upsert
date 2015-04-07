@@ -216,7 +216,6 @@ describe "pg_upsert from file with CSV format" do
       expect(
         a.inserted
       ).to eq(0)
-
     end
 
   end
@@ -227,6 +226,17 @@ describe "pg_upsert from file with CSV format" do
       expect(
         TestModel.first.attributes
       ).to include('data' => 'test data 1', 'created_at' => timestamp, 'updated_at' => timestamp)
+    end
+
+    it "should still report results" do
+      result = result = PostgresUpsert.write TestModel.table_name, File.expand_path('spec/fixtures/tab_with_two_lines.csv'), :delimiter => "\t"
+      expect(
+        result.updated
+      ).to eq(1)
+
+      expect(
+        result.inserted
+      ).to eq(1)
     end
 
 
