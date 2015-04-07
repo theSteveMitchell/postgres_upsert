@@ -33,6 +33,7 @@ class PostgresWriter
 
     upsert_from_temp_table
     drop_temp_table
+    PostgresResult.new(@insert_result, @update_result)
   end
 
 private
@@ -110,7 +111,7 @@ private
   end
 
   def update_from_temp_table
-    ActiveRecord::Base.connection.execute <<-SQL
+    @update_result = ActiveRecord::Base.connection.execute <<-SQL
       UPDATE #{quoted_table_name} AS d
         #{update_set_clause}
         FROM #{@temp_table_name} as t
@@ -130,7 +131,7 @@ private
   def insert_from_temp_table
     columns_string = columns_string_for_insert
     select_string = select_string_for_insert
-    ActiveRecord::Base.connection.execute <<-SQL
+    @insert_result = ActiveRecord::Base.connection.execute <<-SQL
       INSERT INTO #{quoted_table_name} (#{columns_string})
         SELECT #{select_string}
         FROM #{@temp_table_name} as t

@@ -122,6 +122,18 @@ describe "pg_upsert from file with CSV format" do
       ).to eq("id"=>2, "data"=>"test data 2", "created_at" => timestamp, "updated_at" => timestamp)
     end
 
+    it "should return updated and inserted results" do
+      result = PostgresUpsert.write TestModel, File.expand_path('spec/fixtures/tab_with_two_lines.csv'), :delimiter => "\t"
+
+     expect(
+        result.updated
+      ).to eq(1)
+
+      expect(
+        result.inserted
+      ).to eq(1)
+    end
+
     it "should require columns option if no header" do
       expect{
         PostgresUpsert.write TestModel, File.expand_path('spec/fixtures/comma_without_header.csv'), :header => false
@@ -183,15 +195,27 @@ describe "pg_upsert from file with CSV format" do
     before(:each) do
       TestModel.create(id: 1, data: "From the before time, in the long long ago", :created_at => original_created_at)
     end
+
     it 'will only update and not insert if insert_only flag is passed.' do
       PostgresUpsert.write TestModel, File.expand_path('spec/fixtures/tab_with_two_lines.csv'), :delimiter => "\t", :update_only => true
-
       expect(
         TestModel.find(1).attributes
       ).to eq("id"=>1, "data"=>"test data 1", "created_at" => original_created_at  , "updated_at" => timestamp)
       expect{
         TestModel.find(2)
       }.to raise_error(ActiveRecord::RecordNotFound)
+
+    end
+
+    it 'will return the number of updated rows' do
+      a = PostgresUpsert.write TestModel, File.expand_path('spec/fixtures/tab_with_two_lines.csv'), :delimiter => "\t", :update_only => true
+      expect(
+        a.updated
+      ).to eq(1)
+
+      expect(
+        a.inserted
+      ).to eq(0)
 
     end
 

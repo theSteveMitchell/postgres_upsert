@@ -2,6 +2,7 @@ require 'rubygems'
 require 'active_record'
 require 'postgres_upsert/postgres_writer'
 require 'postgres_upsert/postgres_dumb_writer'
+require 'postgres_upsert/postgres_result'
 require 'rails'
 
 class PostgresUpsert < Rails::Railtie
