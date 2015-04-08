@@ -19,50 +19,39 @@ Run the bundle command
 
 ## Usage
 
-The gem will add the additional class method to ActiveRecord::Base
-
-* pg_upsert io_object_or_file_path, [options]
-
-io_object_or_file_path => is a file path or an io object (StringIO, FileIO, etc.)
+```ruby
+PostgresUpsert.write <class_or_table_name>, <io_object_or_file_path>[, options]
+```
+<class_or_table_name> is either an ActiveRecord::Base subclass, or a string representing the name of a database table.
+<io_object_or_file_path> can be either a string representing a file path, or an io object (StringIO, FileIO, etc.)
 
 options:
-- :delimiter - the string to use to delimit fields.  Default is ","
-- :format - the format of the file (valid formats are :csv or :binary).  Default is :csv
+- :delimiter - the string to use to delimit fields from the source data.  Default is ","
 - :header => specifies if the file/io source contains a header row.  Either :header option must be true, or :columns list must be passed.  Default true
-- :key_column => the primary key or unique key column on your ActiveRecord table, used to distinguish new records from existing records.  Default is the primary_key of your ActiveRecord model class.
+- :key_column => the primary key or unique key column on your destination table, used to distinguish new records from existing records.  Default is the primary_key of your destination table/model.
 - :update_only => when true, postgres_upsert will ONLY update existing records, and not insert new.  Default is false.
 
 ## Examples
-
-Let's first copy from a file on the database server, assuming that we have a users table and
-that we are in the Rails console:
-
+for these examples let's assume we have a users table and model:
 ```ruby
-User.pg_upsert "/tmp/users.csv"
+class User < ActiveRecord::Base
 ```
-
-This command will use the headers in the CSV file as fields of the target table, so beware to always have a header in the files you want to import.
-If the column names in the CSV header do not match the field names of the target table, you can pass a map in the options parameter.
+In the rails console we can run:
 ```ruby
-User.pg_upsert "/tmp/users.csv", :map => {'name' => 'first_name'}
+PostgresUpsert.write User, "/tmp/users.csv"
 ```
-The header name in the CSV file will be mapped to the field called first_name in the users table.
 
-To copy a binary formatted data file or IO object, you can specify the format as binary:
+This command will use the headers in the CSV file as fields of the target table (by default)
+If the CSV file's header does not match the field names of the User class, you can pass a map in the options parameter.
 ```ruby
-User.pg_upsert "/tmp/users.dat", :format => :binary, :columns => ["id, "name"]
+PostgresUpsert.write "users", "/tmp/users.csv", :map => {'name' => 'first_name'}
 ```
-Which will generate the following SQL command:
-```sql
-COPY users (id, name) FROM '/tmp/users.dat' WITH BINARY
-```
-NOTE: binary files do not include a header row, so passing a :columns array is required for binary files.
+The `name` column in the CSV file will be mapped to the `first_name` field in the users table.
 
-
-pg_upsert  supports the 'merge' operation, which is not yet natively supported in Postgres.  The data can include both new and existing records, and pg_upsert will handle either update or insert of each record appropriately.  Since the Postgres COPY command does not handle this, pg_upsert accomplishes it using an intermediary temp table:
+postgres_upsert  supports 'merge' operations, which is not yet natively supported in Postgres.  The data can include both new and existing records, and postgres_upsert will handle either update or insert of records appropriately.  Since the Postgres COPY command does not handle this, postgres_upsert accomplishes it using an intermediary temp table.
 
 The merge/upsert happens in 5 steps (assume your data table is called "users")
-* create a temp table named users_temp_123 where "123" is a randomly generated number.  In postgres temp tables are only visible to the current database session, so naming conflicts should not be a problem.  We add this random suffix just for fun.
+* create a temp table named users_temp_123 where "123" is a random int.  In postgres temp tables are only visible to the current database session, so naming conflicts should not be a problem.  We add this random suffix just for additional safety.
 * COPY the data to user_temp
 * issue a query to insert all new records from users_temp_123 into users ("new" records are those records whos primary key does not already exist in the users)
 * issue a query to update all existing records in users with the data in users_temp_123 ("existing" records are those whose primary key already exists in the users table)
@@ -70,24 +59,39 @@ The merge/upsert happens in 5 steps (assume your data table is called "users")
 
 ## timestamp columns
 
-currently pg_upsert detects and manages the default rails timestamp columns `created_at` and `updated_at`.  If these fields exist in your destination table, pg_upsert will keep these current as expected.  I recommend you do NOT include these fields in your source CSV/IO, as pg_upsert will not honor them.
+currently postgres_upsert detects and manages the default rails timestamp columns `created_at` and `updated_at`.  If these fields exist in your destination table, postgres_upsert will keep these current as expected.  I recommend you do NOT include these fields in your source CSV/IO, as postgres_upsert will not honor them.
 
 * newly inserted records get a current timestamp for created_at
 * records existing in the source file/IO will get an update to their updated_at timestamp (even if all fields maintain the same value)
 * records that are in the destination table but not the source will not have their timestamps changed.
 
 
-### overriding the key_column
+### Overriding the key_column
 
-By default pg_upsert uses the primary key on your ActiveRecord table to determine if each record should be inserted or updated.  You can override the column using the :key_field option:
+By default postgres_upsert uses the primary key on your ActiveRecord table to determine if each record should be inserted or updated.  You can override the column using the :key_field option:
 
 ```ruby
-User.pg_upsert "/tmp/users.dat", :format => :binary, :key_column => ["external_twitter_id"]
+PostgresUpsert.write User "/tmp/users.csv", :key_column => ["external_twitter_id"]
 ```
 
 obviously, the field you pass must be a unique key in your database (this is not enforced at the moment, but will be)
 
-passing :update_only = true will ensure that no new records are created, but records will be updated.
+passing :update_only => true will ensure that no new records are created, but records will be updated.
+
+### Insert/Update Counts
+PostgresUpsert with also return a PostgresUpsert::Result object that will tell you how many records were inserted or updated:
+
+```ruby
+User.delete_all
+result = PostgresUpsert.write User "/tmp/users.csv"
+result.inserted 
+# => 10000
+result.updated
+# => 0
+```
+
+### Huge Caveat!
+Since postgres_upsert does not use validations or even instantiate rails objects, you can get invalid data if you're not careful.  Postgres upsert assumes that your source data is minimally cleaned up, and will not tell you if any data is invalid based on rails model rules.  It will, of course raise an error if data does not conform to your database constraints.
 
 ### Benchmarks!
 
@@ -120,7 +124,7 @@ def insert_smart
         end
       end
       io = StringIO.new(csv_string)
-      User.pg_upsert io, key_column: "email"
+      PostgresUpsert.write User io, key_column: "email"
     end
     puts time
 end
