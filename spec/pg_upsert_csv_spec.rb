@@ -188,6 +188,15 @@ describe "pg_upsert from file with CSV format" do
       ).to include("data" => "old stuff", "extra" => "ABC: Always Be Changing.")
     end
 
+    it 'allows key column to be a string or symbol' do
+      file = File.open(File.expand_path('spec/fixtures/no_id.csv'), 'r')
+
+      PostgresUpsert.write(ThreeColumn, file, :header => true, :key_column => :data)
+      expect(
+        ThreeColumn.last.attributes
+      ).to include("data" => "old stuff", "extra" => "ABC: Always Be Changing.")
+    end
+
     it 'raises an error if the expected key column is not in data' do
       file = File.open(File.expand_path('spec/fixtures/no_id.csv'), 'r')
 

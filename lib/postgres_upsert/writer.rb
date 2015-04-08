@@ -157,7 +157,7 @@ module PostgresUpsert
     end
 
     def verify_temp_has_key
-      unless @columns_list.include?(@options[:key_column])
+      unless @columns_list.include?(@options[:key_column].to_s)
         raise "Expected a unique column '#{@options[:key_column]}' but the source data does not include this column.  Update the :columns list or explicitly set the :key_column option.}"
       end
     end
