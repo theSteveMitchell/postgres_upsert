@@ -4,17 +4,18 @@ module PostgresUpsert
     def initialize(klass, source, options = {})
       @klass = klass
       @options = options.reverse_merge({
-        :delimiter => ",", 
-        :header => true, 
+        :delimiter => ",",
+        :header => true,
         :key_column => primary_key,
-        :update_only => false})
+        :update_only => false,
+        :search => []})
       @source = source.instance_of?(String) ? File.open(source, 'r') : source
       @columns_list = get_columns
       generate_temp_table_name
     end
 
     def write
-      if @columns_list.empty? 
+      if @columns_list.empty?
         raise "Either the :columns option or :header => true are required"
       end
 
@@ -116,7 +117,7 @@ module PostgresUpsert
         UPDATE #{quoted_table_name} AS d
           #{update_set_clause}
           FROM #{@temp_table_name} as t
-          WHERE t.#{@options[:key_column]} = d.#{@options[:key_column]}
+          WHERE #{search_sql}
           AND d.#{@options[:key_column]} IS NOT NULL;
       SQL
     end
@@ -136,12 +137,15 @@ module PostgresUpsert
         INSERT INTO #{quoted_table_name} (#{columns_string})
           SELECT #{select_string}
           FROM #{@temp_table_name} as t
-          WHERE NOT EXISTS 
-            (SELECT 1 
-                  FROM #{quoted_table_name} as d 
-                  WHERE d.#{@options[:key_column]} = t.#{@options[:key_column]})
-          AND t.#{@options[:key_column]} IS NOT NULL;
+          WHERE NOT EXISTS
+            (SELECT 1
+                  FROM #{quoted_table_name} as d
+                  WHERE #{search_sql});
       SQL
+    end
+
+    def search_sql
+      @options[:search].map {|field| "d.#{field} = t.#{field}"}.join(' AND ')
     end
 
     def create_temp_table
@@ -151,20 +155,20 @@ module PostgresUpsert
         SET client_min_messages=WARNING;
         DROP TABLE IF EXISTS #{@temp_table_name};
 
-        CREATE TEMP TABLE #{@temp_table_name} 
+        CREATE TEMP TABLE #{@temp_table_name}
           AS SELECT #{columns_string} FROM #{quoted_table_name} WHERE 0 = 1;
       SQL
     end
 
     def verify_temp_has_key
-      unless @columns_list.include?(@options[:key_column].to_s)
-        raise "Expected a unique column '#{@options[:key_column]}' but the source data does not include this column.  Update the :columns list or explicitly set the :key_column option.}"
-      end
+      # unless @columns_list.include?(@options[:key_column].to_s)
+      #   raise "Expected a unique column '#{@options[:key_column]}' but the source data does not include this column.  Update the :columns list or explicitly set the :key_column option.}"
+      # end
     end
 
     def drop_temp_table
       ActiveRecord::Base.connection.execute <<-SQL
-        DROP TABLE #{@temp_table_name} 
+        DROP TABLE #{@temp_table_name}
       SQL
     end
   end

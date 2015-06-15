@@ -22,7 +22,7 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   s.summary = "A rubygem that integrates with ActiveRecord to insert/update large data sets into the database efficiently"
 
-  s.add_dependency "pg", '~> 0.17.0'
+  s.add_dependency "pg", '~> 0.18.0'
   s.add_dependency "activerecord", '>= 3.0.0'
   s.add_dependency "rails", '>= 3.0.0'
   s.add_development_dependency "bundler"
