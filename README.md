@@ -28,7 +28,7 @@ PostgresUpsert.write <class_or_table_name>, <io_object_or_file_path>[, options]
 options:
 - :delimiter - the string to use to delimit fields from the source data.  Default is ","
 - :header => specifies if the file/io source contains a header row.  Either :header option must be true, or :columns list must be passed.  Default true
-- :key_column => the primary key or unique key column on your destination table, used to distinguish new records from existing records.  Default is the primary_key of your destination table/model.
+- :unique_key => the primary key or unique key column (or composite key columns) on your destination table, used to distinguish new records from existing records.  Default is the primary_key of your destination table/model.
 - :update_only => when true, postgres_upsert will ONLY update existing records, and not insert new.  Default is false.
 
 ## Examples
@@ -66,15 +66,22 @@ currently postgres_upsert detects and manages the default rails timestamp column
 * records that are in the destination table but not the source will not have their timestamps changed.
 
 
-### Overriding the key_column
+### Overriding the unique_key
 
-By default postgres_upsert uses the primary key on your ActiveRecord table to determine if each record should be inserted or updated.  You can override the column using the :key_field option:
+By default postgres_upsert uses the primary key on your ActiveRecord table to determine if each record should be inserted or updated.  You can override the column using the :unique_key option:
 
 ```ruby
-PostgresUpsert.write User "/tmp/users.csv", :key_column => ["external_twitter_id"]
+PostgresUpsert.write User "/tmp/users.csv", :unique_key => ["external_twitter_id"]
 ```
 
 obviously, the field you pass must be a unique key in your database (this is not enforced at the moment, but will be)
+
+If your source data does not contain the primary key, or an individual unique key, you can pass multiple columns in the unique_key option:
+
+```ruby
+  PostgresUpsert.write User "/tmp/users.csv", :unique_key => ["state_id_numer", "state_name"]
+```
+As long as combined columns represent a unique value, row, we can successfully upsert.
 
 passing :update_only => true will ensure that no new records are created, but records will be updated.
 
@@ -124,7 +131,7 @@ def insert_smart
         end
       end
       io = StringIO.new(csv_string)
-      PostgresUpsert.write User io, key_column: "email"
+      PostgresUpsert.write User io, unique_key: "email"
     end
     puts time
 end

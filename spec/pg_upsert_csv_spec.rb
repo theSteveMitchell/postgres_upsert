@@ -247,7 +247,7 @@ describe "pg_upsert from file with CSV format" do
 
     it "should still report results" do
       TestModel.create(data: "test data 1")
-      result = result = PostgresUpsert.write TestModel.table_name, File.expand_path('spec/fixtures/tab_with_two_lines.csv'), :delimiter => "\t"
+      result = PostgresUpsert.write TestModel.table_name, File.expand_path('spec/fixtures/tab_with_two_lines.csv'), :delimiter => "\t"
 
       expect(
         result.updated

@@ -31,6 +31,7 @@ describe "pg_upsert from file with CSV format" do
       existing = CompositeKeyModel.create(comp_key_1: 2, comp_key_2:3, data: "old stuff")
 
       PostgresUpsert.write(CompositeKeyModel, file, :unique_key => ["comp_key_1", "comp_key_2"])
+
       expect(
         CompositeKeyModel.find_by({comp_key_1: 2, comp_key_2:3}).attributes
       ).to include("data" => "test data 2")
@@ -38,6 +39,15 @@ describe "pg_upsert from file with CSV format" do
       expect(
         CompositeKeyModel.find_by({comp_key_1: 1, comp_key_2:2}).attributes
       ).to include("data" => "test data 1")
+    end
+
+    it 'fails if composite keys are not unique.' do
+      file = File.open(File.expand_path('spec/fixtures/composite_nonkey_with_header.csv'), 'r')
+      existing = CompositeKeyModel.create(comp_key_1: 1, comp_key_2:2, data: "old stuff")
+
+       expect{
+        PostgresUpsert.write(CompositeKeyModel, file, :unique_key => ["comp_key_1", "comp_key_2"])
+      }.to raise_error(/Check to make sure your key is unique/)
     end
     
   end

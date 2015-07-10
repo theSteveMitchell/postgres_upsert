@@ -25,7 +25,7 @@ module PostgresUpsert
       columns_string = columns_string_for_copy
       create_temp_table
 
-      ActiveRecord::Base.connection.raw_connection.copy_data %{COPY #{copy_table} #{columns_string} FROM STDIN #{csv_options}} do
+      @copy_result = ActiveRecord::Base.connection.raw_connection.copy_data %{COPY #{copy_table} #{columns_string} FROM STDIN #{csv_options}} do
 
         while line = @source.gets do
           next if line.strip.size == 0
@@ -35,10 +35,22 @@ module PostgresUpsert
 
       upsert_from_temp_table
       drop_temp_table
-      PostgresUpsert::Result.new(@insert_result, @update_result)
+
+      summarize_results
     end
 
   private
+
+    def summarize_results
+      result = PostgresUpsert::Result.new(@insert_result, @update_result, @copy_result)
+      expected_rows = @options[:update_only] ? result.updated_rows : result.copied_rows
+      
+      if result.changed_rows != expected_rows
+        raise "#{expected_rows} rows were copied, but #{result.changed_rows} were upserted to destination table.  Check to make sure your key is unique."
+      end
+
+      return result
+    end
 
     def primary_key
       @klass.primary_key
