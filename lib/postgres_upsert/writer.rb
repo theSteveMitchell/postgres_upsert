@@ -6,9 +6,9 @@ module PostgresUpsert
       @options = options.reverse_merge({
         :delimiter => ",",
         :header => true,
-        :key_column => primary_key,
-        :update_only => false,
-        :search => []})
+        :unique_key => [primary_key],
+        :update_only => false})
+      @options[:unique_key] = Array.wrap(@options[:unique_key])
       @source = source.instance_of?(String) ? File.open(source, 'r') : source
       @columns_list = get_columns
       generate_temp_table_name
@@ -94,7 +94,9 @@ module PostgresUpsert
 
     def select_string_for_create
       columns = @columns_list.map(&:to_sym)
-      columns << @options[:key_column].to_sym unless columns.include?(@options[:key_column].to_sym)
+      @options[:unique_key].each do |key_component|
+        columns << key_component.to_sym unless columns.include?(key_component.to_sym)
+      end
       get_columns_string(columns)
     end
 
@@ -117,8 +119,8 @@ module PostgresUpsert
         UPDATE #{quoted_table_name} AS d
           #{update_set_clause}
           FROM #{@temp_table_name} as t
-          WHERE #{search_sql}
-          AND d.#{@options[:key_column]} IS NOT NULL;
+          WHERE #{unique_key_select("t", "d")}
+          AND #{unique_key_present("d")}
       SQL
     end
 
@@ -140,12 +142,16 @@ module PostgresUpsert
           WHERE NOT EXISTS
             (SELECT 1
                   FROM #{quoted_table_name} as d
-                  WHERE #{search_sql});
+                  WHERE #{unique_key_select("t", "d")});
       SQL
     end
 
-    def search_sql
-      @options[:search].map {|field| "d.#{field} = t.#{field}"}.join(' AND ')
+    def unique_key_select(source, dest)
+      @options[:unique_key].map {|field| "#{source}.#{field} = #{dest}.#{field}"}.join(' AND ')
+    end
+
+    def unique_key_present(source)
+      @options[:unique_key].map {|field| "#{source}.#{field} IS NOT NULL"}.join(' AND ')
     end
 
     def create_temp_table
@@ -161,9 +167,11 @@ module PostgresUpsert
     end
 
     def verify_temp_has_key
-      # unless @columns_list.include?(@options[:key_column].to_s)
-      #   raise "Expected a unique column '#{@options[:key_column]}' but the source data does not include this column.  Update the :columns list or explicitly set the :key_column option.}"
-      # end
+      @options[:unique_key].each do |key_component|
+        unless @columns_list.include?(key_component.to_s)
+          raise "Expected a unique column '#{key_component}' but the source data does not include this column.  Update the :columns list or explicitly set the unique_key option.}"
+       end
+      end
     end
 
     def drop_temp_table
