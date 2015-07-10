@@ -258,7 +258,6 @@ describe "pg_upsert from file with CSV format" do
       ).to eq(1)
     end
 
-
   end
 end
 

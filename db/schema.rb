@@ -11,18 +11,33 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20150214192135) do
+ActiveRecord::Schema.define(version: 20150710162236) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
-# Could not dump table "reserved_word_models" because of following NoMethodError
-#   undefined method `[]' for nil:NilClass
+  create_table "composite_key_models", force: :cascade do |t|
+    t.integer "comp_key_1"
+    t.integer "comp_key_2"
+    t.string  "data"
+  end
 
-# Could not dump table "test_models" because of following NoMethodError
-#   undefined method `[]' for nil:NilClass
+  create_table "reserved_word_models", force: :cascade do |t|
+    t.string "select", limit: 255
+    t.string "group",  limit: 255
+  end
 
-# Could not dump table "three_columns" because of following NoMethodError
-#   undefined method `[]' for nil:NilClass
+  create_table "test_models", force: :cascade do |t|
+    t.string   "data",       limit: 255
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  create_table "three_columns", force: :cascade do |t|
+    t.string   "data",       limit: 255
+    t.string   "extra",      limit: 255
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
 
 end
