@@ -25,11 +25,11 @@ module PostgresUpsert
       columns_string = columns_string_for_copy
       create_temp_table
 
-      @copy_result = ActiveRecord::Base.connection.raw_connection.copy_data %{COPY #{copy_table} #{columns_string} FROM STDIN #{csv_options}} do
+      @copy_result = database_connection.raw_connection.copy_data %{COPY #{copy_table} #{columns_string} FROM STDIN #{csv_options}} do
 
         while line = @source.gets do
           next if line.strip.size == 0
-          ActiveRecord::Base.connection.raw_connection.put_copy_data line
+          database_connection.raw_connection.put_copy_data line
         end
       end
 
@@ -40,6 +40,10 @@ module PostgresUpsert
     end
 
   private
+
+    def database_connection
+      @klass.connection
+    end
 
     def summarize_results
       result = PostgresUpsert::Result.new(@insert_result, @update_result, @copy_result)
@@ -127,7 +131,7 @@ module PostgresUpsert
     end
 
     def update_from_temp_table
-      @update_result = ActiveRecord::Base.connection.execute <<-SQL
+      @update_result = database_connection.execute <<-SQL
         UPDATE #{quoted_table_name} AS d
           #{update_set_clause}
           FROM #{@temp_table_name} as t
@@ -147,7 +151,7 @@ module PostgresUpsert
     def insert_from_temp_table
       columns_string = columns_string_for_insert
       select_string = select_string_for_insert
-      @insert_result = ActiveRecord::Base.connection.execute <<-SQL
+      @insert_result = database_connection.execute <<-SQL
         INSERT INTO #{quoted_table_name} (#{columns_string})
           SELECT #{select_string}
           FROM #{@temp_table_name} as t
@@ -169,7 +173,7 @@ module PostgresUpsert
     def create_temp_table
       columns_string = select_string_for_create
       verify_temp_has_key
-      ActiveRecord::Base.connection.execute <<-SQL
+      database_connection.execute <<-SQL
         SET client_min_messages=WARNING;
         DROP TABLE IF EXISTS #{@temp_table_name};
 
@@ -187,7 +191,7 @@ module PostgresUpsert
     end
 
     def drop_temp_table
-      ActiveRecord::Base.connection.execute <<-SQL
+      database_connection.execute <<-SQL
         DROP TABLE #{@temp_table_name}
       SQL
     end

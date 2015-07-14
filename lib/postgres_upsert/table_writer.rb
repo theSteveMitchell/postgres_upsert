@@ -10,6 +10,10 @@ module PostgresUpsert
 
   private
 
+    def database_connection
+      ActiveRecord::Base.connection
+    end
+
     def primary_key
       @primary_key ||= begin
         query = <<-sql
