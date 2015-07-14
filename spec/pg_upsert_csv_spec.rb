@@ -173,7 +173,7 @@ describe "pg_upsert from file with CSV format" do
       three_col = ThreeColumn.create(id: 1, data: "old stuff", extra: "neva change!")
       file = File.open(File.expand_path('spec/fixtures/no_id.csv'), 'r')
 
-      PostgresUpsert.write(ThreeColumn, file, :key_column => "data")
+      PostgresUpsert.write(ThreeColumn, file, :unique_key => "data")
       expect(
         three_col.reload.extra
       ).to eq("ABC: Always Be Changing.")
@@ -182,7 +182,7 @@ describe "pg_upsert from file with CSV format" do
     it 'inserts records if the passed match column doesnt exist' do
       file = File.open(File.expand_path('spec/fixtures/no_id.csv'), 'r')
 
-      PostgresUpsert.write(ThreeColumn, file, :key_column => "data")
+      PostgresUpsert.write(ThreeColumn, file, :unique_key => "data")
       expect(
         ThreeColumn.last.attributes
       ).to include("data" => "old stuff", "extra" => "ABC: Always Be Changing.")
@@ -191,7 +191,7 @@ describe "pg_upsert from file with CSV format" do
     it 'allows key column to be a string or symbol' do
       file = File.open(File.expand_path('spec/fixtures/no_id.csv'), 'r')
 
-      PostgresUpsert.write(ThreeColumn, file, :header => true, :key_column => :data)
+      PostgresUpsert.write(ThreeColumn, file, :header => true, :unique_key => :data)
       expect(
         ThreeColumn.last.attributes
       ).to include("data" => "old stuff", "extra" => "ABC: Always Be Changing.")
@@ -247,7 +247,7 @@ describe "pg_upsert from file with CSV format" do
 
     it "should still report results" do
       TestModel.create(data: "test data 1")
-      result = result = PostgresUpsert.write TestModel.table_name, File.expand_path('spec/fixtures/tab_with_two_lines.csv'), :delimiter => "\t"
+      result = PostgresUpsert.write TestModel.table_name, File.expand_path('spec/fixtures/tab_with_two_lines.csv'), :delimiter => "\t"
 
       expect(
         result.updated
@@ -257,7 +257,6 @@ describe "pg_upsert from file with CSV format" do
         result.inserted
       ).to eq(1)
     end
-
 
   end
 end
