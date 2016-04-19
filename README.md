@@ -113,7 +113,7 @@ And the following railsy code to create 10,000 users:
 def insert_dumb
     time = Benchmark.measure do
       (1..10000).each do |n|
-        User.create!(:email => "number#{n}@postgres.up", :password => "#{(n-5..n).to_a.join('')}")
+        User.create!(:email => "number#{n}@email.com", :password => "password#{n)}")
       end
     end
   puts time
@@ -125,9 +125,9 @@ Compared to the following code using Postgres_upsert:
 def insert_smart
     time = Benchmark.measure do
       csv_string = CSV.generate do |csv|
-        csv << %w(email password)
+        csv << %w(email password)    # CSV header row
         (1..10000).each do |n|
-          csv << ["number#{n}@postgres.up", "#{(n-5..n).to_a.join('')}"]
+          csv << ["number#{n}@email.com", "password#{n)}"]
         end
       end
       io = StringIO.new(csv_string)
