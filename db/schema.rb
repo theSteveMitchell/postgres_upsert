@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20150710162236) do
+ActiveRecord::Schema.define(version: 20160420152740) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -20,6 +20,11 @@ ActiveRecord::Schema.define(version: 20150710162236) do
     t.integer "comp_key_1"
     t.integer "comp_key_2"
     t.string  "data"
+  end
+
+  create_table "counter_columns", force: :cascade do |t|
+    t.string  "data"
+    t.integer "update_count", default: 0
   end
 
   create_table "reserved_word_models", force: :cascade do |t|
