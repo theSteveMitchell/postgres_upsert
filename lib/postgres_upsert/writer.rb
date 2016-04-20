@@ -7,7 +7,8 @@ module PostgresUpsert
         :delimiter => ",",
         :header => true,
         :unique_key => [primary_key],
-        :update_only => false})
+        :update_only => false,
+        :counter_column => nil})
       @options[:unique_key] = Array.wrap(@options[:unique_key])
       @source = source.instance_of?(String) ? File.open(source, 'r') : source
       @columns_list = get_columns
@@ -66,6 +67,10 @@ module PostgresUpsert
 
     def quoted_table_name
       @klass.quoted_table_name
+    end
+
+    def counter_column
+      @options[:counter_column]
     end
 
     def get_columns
@@ -145,6 +150,7 @@ module PostgresUpsert
         "\"#{col}\" = t.\"#{col}\""
       end
       command << "\"updated_at\" = '#{DateTime.now.utc}'" if column_names.include?("updated_at")
+      command << "\"#{counter_column}\" = \"#{counter_column}\" + 1" if counter_column
       "SET #{command.join(',')}"
     end
 
