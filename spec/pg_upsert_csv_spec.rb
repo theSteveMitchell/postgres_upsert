@@ -259,5 +259,25 @@ describe "pg_upsert from file with CSV format" do
     end
 
   end
+
+  context 'counter column update' do
+    before(:each) do
+      ActiveRecord::Base.connection.execute %{
+        TRUNCATE TABLE counter_columns;
+      }
+    end
+    it "increments the counter column on updated rows" do
+      CounterColumn.create(id: 1, data: "test data 1")
+      PostgresUpsert.write CounterColumn, File.expand_path('spec/fixtures/comma_with_two_lines.csv'), :counter_column => :update_count
+
+      expect(
+        CounterColumn.find(1).update_count
+      ).to eq(1)
+
+      expect(
+        CounterColumn.find(2).update_count
+      ).to eq(0)
+    end
+  end
 end
 
