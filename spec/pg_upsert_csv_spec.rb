@@ -37,6 +37,12 @@ describe "pg_upsert from file with CSV format" do
     }.to raise_error
   end
 
+  it "throws error if source data contains duplicate pk" do
+    expect{
+      PostgresUpsert.write TestModel, File.expand_path('spec/fixtures/comma_with_header_duplicate.csv')
+    }.to raise_error(/duplicate key/)
+  end
+
   it "should import from IO without field_map" do
     PostgresUpsert.write TestModel, File.open(File.expand_path('spec/fixtures/comma_with_header.csv'), 'r')
     expect(
