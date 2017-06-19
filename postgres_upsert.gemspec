@@ -13,6 +13,7 @@ Gem::Specification.new do |s|
   s.date = "2014-09-12"
   s.description = "Uses Postgres's powerful COPY command to upsert large sets of data into ActiveRecord tables"
   s.email = "thestevemitchell@gmail.com"
+  s.license = "MIT"
   git_files            = `git ls-files`.split("\n") rescue ''
   s.files              = git_files
   s.test_files         = `git ls-files -- {test,spec,features}/*`.split("\n")
