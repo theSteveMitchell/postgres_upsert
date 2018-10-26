@@ -111,6 +111,7 @@ module PostgresUpsert
     def select_string_for_create
       columns = @columns_list.map(&:to_sym)
       @options[:unique_key].each do |key_component|
+        next unless key_component
         columns << key_component.to_sym unless columns.include?(key_component.to_sym)
       end
       get_columns_string(columns)
@@ -126,7 +127,6 @@ module PostgresUpsert
     end
 
     def upsert_from_temp_table
-      update_from_temp_table
       insert_from_temp_table unless @options[:update_only]
     end
 
@@ -154,11 +154,7 @@ module PostgresUpsert
       @insert_result = database_connection.execute <<-SQL
         INSERT INTO #{quoted_table_name} (#{columns_string})
           SELECT #{select_string}
-          FROM #{@temp_table_name} as t
-          WHERE NOT EXISTS
-            (SELECT 1
-                  FROM #{quoted_table_name} as d
-                  WHERE #{unique_key_select("t", "d")});
+          FROM #{@temp_table_name};
       SQL
     end
 
@@ -172,7 +168,6 @@ module PostgresUpsert
 
     def create_temp_table
       columns_string = select_string_for_create
-      verify_temp_has_key
       database_connection.execute <<-SQL
         SET client_min_messages=WARNING;
         DROP TABLE IF EXISTS #{@temp_table_name};
