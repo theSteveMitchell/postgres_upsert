@@ -5,7 +5,6 @@ require 'fixtures/test_model'
 require 'fixtures/three_column'
 require 'fixtures/reserved_word_model'
 require 'fixtures/composite_key_model'
-require 'rspec'
 require 'rspec/rails'
 require 'rspec/autorun'
 

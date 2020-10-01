@@ -158,8 +158,11 @@ Note that for the benchmark, my database is local.  The performance improvement 
 
 ## Note on Patches/Pull Requests
 
-* Fork the project
-* add your feature/fix to your fork(rpsec tests pleaze)
+I greatly appreciate contribution to this gem. 
+
+* Fork the project and clone the repo locally
+* run 'bin/setup' to setup dependencies and create test DB
+* add your feature/fix to your fork(add and run rpsec tests please)
 * submit a PR
 * If you find an issue but can't fix in in a PR, please log an issue.  I'll do my best.
 
