@@ -2,5 +2,5 @@ language: ruby
 before_install:
     - gem install bundler
 rvm:
-  - 2.4.4
+  - 2.5.0
   - ruby-head
