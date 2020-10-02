@@ -1,12 +1,6 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 
 describe "pg_upsert from file with CSV format" do
-  before(:each) do
-    ActiveRecord::Base.connection.execute %{
-      TRUNCATE TABLE composite_key_models;
-      SELECT setval('composite_key_models_id_seq', 1, false);
-    }
-  end
 
   before do
     DateTime.stub_chain(:now, :utc).and_return (DateTime.parse("2012-01-01").utc)

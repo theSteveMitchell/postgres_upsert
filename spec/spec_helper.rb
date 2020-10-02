@@ -9,7 +9,9 @@ require 'rspec/rails'
 require 'rspec/autorun'
 
 RSpec.configure do |config|
-  #config.use_transactional_fixtures = false
+  config.before(:example) do
+    DatabaseCleaner.clean_with(:truncation)
+  end
   config.expose_current_running_example_as :example
   config.infer_spec_type_from_file_location!
 end
