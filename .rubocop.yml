@@ -18,6 +18,9 @@ Layout/IndentationWidth:
 Metrics/LineLength:
   Max: 99
 
+Metrics/MethodLength:
+  CountAsOne: ['array', 'hash', 'heredoc']
+
 Style/RescueModifier:
   Enabled: false
 
