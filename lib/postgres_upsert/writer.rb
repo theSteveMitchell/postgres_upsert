@@ -89,23 +89,23 @@ module PostgresUpsert
 
     def columns_string_for_select
       columns = @columns_list.clone
-      columns << 'created_at' if column_names.include?('created_at')
-      columns << 'updated_at' if column_names.include?('updated_at')
+      columns << 'created_at' if column_names.include?('created_at') &&  !@columns_list.include?('created_at')
+      columns << 'updated_at' if column_names.include?('updated_at') &&  !@columns_list.include?('updated_at')
       get_columns_string(columns)
     end
 
     def columns_string_for_insert
       columns = @columns_list.clone
-      columns << 'created_at' if column_names.include?('created_at')
-      columns << 'updated_at' if column_names.include?('updated_at')
+      columns << 'created_at' if column_names.include?('created_at') &&  !@columns_list.include?('created_at')
+      columns << 'updated_at' if column_names.include?('updated_at') &&  !@columns_list.include?('updated_at')
       get_columns_string(columns)
     end
 
     def select_string_for_insert
       columns = @columns_list.clone
       str = get_columns_string(columns)
-      str << ",'#{DateTime.now.utc}'" if column_names.include?('created_at')
-      str << ",'#{DateTime.now.utc}'" if column_names.include?('updated_at')
+      str << ",'#{DateTime.now.utc}'" if column_names.include?('created_at') &&  !@columns_list.include?('created_at')
+      str << ",'#{DateTime.now.utc}'" if column_names.include?('updated_at') &&  !@columns_list.include?('updated_at')
       str
     end
 
@@ -145,8 +145,10 @@ module PostgresUpsert
       command = @columns_list.map do |col|
         "\"#{col}\" = t.\"#{col}\""
       end
-      command << "\"updated_at\" = '#{DateTime.now.utc}'" if column_names.include?('updated_at')
-      "SET #{command.join(',')}"
+      unless @columns_list.include?('updated_at')
+        command << "\"updated_at\" = '#{DateTime.now.utc}'" if column_names.include?('updated_at')
+      end
+        "SET #{command.join(',')}"
     end
 
     def insert_from_temp_table
