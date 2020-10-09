@@ -201,7 +201,7 @@ describe "pg_upsert from file with CSV format" do
 
       expect{
       PostgresUpsert.write(ThreeColumn, file, :header => true)
-      }.to raise_error (/Expected a unique column 'id'/)
+      }.to raise_error (/Expected column 'id'/)
     end
 
   end

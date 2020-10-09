@@ -12,21 +12,15 @@ module PostgresUpsert
       parse_source(source)
       @options[:unique_key] = Array.wrap(@options[:unique_key])
 
-      generate_temp_table_name
     end
 
     def write
-      if source_columns.empty?
-        raise 'Either the :columns option or :header => true are required'
-      end
+      validate_options
 
       csv_options = "DELIMITER '#{@options[:delimiter]}' CSV"
-
-      copy_table = @temp_table_name
-      columns_string = columns_string_for_copy
       create_temp_table
 
-      @copy_result = database_connection.raw_connection.copy_data %{COPY #{copy_table} #{columns_string} FROM STDIN #{csv_options}} do
+      @copy_result = database_connection.raw_connection.copy_data %{COPY #{@temp_table_name} #{columns_string_for_copy} FROM STDIN #{csv_options}} do
         while (line = @source_data.gets)
           next if line.strip.empty?
 
@@ -137,7 +131,7 @@ module PostgresUpsert
     end
 
     def generate_temp_table_name
-      @temp_table_name = "#{@table_name}_temp_#{rand(1000)}"
+      @temp_table_name ||= "#{@table_name}_temp_#{rand(1000)}"
     end
 
     def upsert_from_temp_table
@@ -188,21 +182,24 @@ module PostgresUpsert
     end
 
     def create_temp_table
-      columns_string = select_string_for_create
-      verify_temp_has_key
+      generate_temp_table_name
       database_connection.execute <<-SQL
         SET client_min_messages=WARNING;
         DROP TABLE IF EXISTS #{@temp_table_name};
 
         CREATE TEMP TABLE #{@temp_table_name}
-          AS SELECT #{columns_string} FROM #{quoted_table_name} WHERE 0 = 1;
+          AS SELECT #{select_string_for_create} FROM #{quoted_table_name} WHERE 0 = 1;
       SQL
     end
 
-    def verify_temp_has_key
+    def validate_options
+      if source_columns.empty?
+        raise 'Either the :columns option or :header => true are required'
+      end
+
       @options[:unique_key].each do |key_component|
         unless source_columns.include?(key_component.to_s)
-          raise "Expected a unique column '#{key_component}' but the source data does not include this column.  Update the :columns list or explicitly set the unique_key option.}"
+          raise "Expected column '#{key_component}' was not found in source"
         end
       end
     end
