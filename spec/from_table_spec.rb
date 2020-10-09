@@ -20,7 +20,7 @@ describe PostgresUpsert do
         before do
           csv_string = CSV.generate do |csv|
             csv << %w(id data)    # CSV header row
-            (1..1_000_000).each do |n|
+            (1..100_000).each do |n|
               csv << ["#{n}", "data about #{n}"]
             end
           end
@@ -31,7 +31,7 @@ describe PostgresUpsert do
         it "moves like the poop through a goose" do
           expect{
             PostgresUpsert.write TestModelCopy, TestModel
-          }.to change{TestModelCopy.count}.by(1_000_000)
+          }.to change{TestModelCopy.count}.by(100_000)
 
         end
       end

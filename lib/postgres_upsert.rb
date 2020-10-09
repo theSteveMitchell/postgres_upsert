@@ -15,9 +15,9 @@ module PostgresUpsert
     end
 
     def adapter(destination, source)
-      if [String, StringIO].include?(source.class) && destination.is_a?(String)
+      if [String, StringIO, File].include?(source.class) && destination.is_a?(String)
         TableWriter
-      elsif [String, StringIO].include?(source.class) && destination < ActiveRecord::Base
+      elsif [String, StringIO, File].include?(source.class) && destination < ActiveRecord::Base
         Writer
       elsif source < ActiveRecord::Base && destination < ActiveRecord::Base
         ModelToModelAdapter
