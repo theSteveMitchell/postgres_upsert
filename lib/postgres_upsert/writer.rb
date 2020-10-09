@@ -1,15 +1,17 @@
 module PostgresUpsert
   class Writer
 
-    def initialize(klass, source, options = {})
+    def initialize(klass, destination, source, options = {})
       @klass = klass
+      @destination = destination
+      @source = source
       @options = options.reverse_merge({
         delimiter: ',',
         header: true,
         unique_key: [primary_key],
         update_only: false
       })
-      parse_source(source)
+      @source = source
       @options[:unique_key] = Array.wrap(@options[:unique_key])
 
     end
@@ -21,7 +23,7 @@ module PostgresUpsert
       create_temp_table
 
       @copy_result = database_connection.raw_connection.copy_data %{COPY #{@temp_table_name} #{columns_string_for_copy} FROM STDIN #{csv_options}} do
-        while (line = @source_data.gets)
+        while (line = @source.gets)
           next if line.strip.empty?
 
           database_connection.raw_connection.put_copy_data line
@@ -37,7 +39,7 @@ module PostgresUpsert
   private
 
     def database_connection
-      @klass.connection
+      @destination.database_connection
     end
 
     def summarize_results
@@ -52,34 +54,19 @@ module PostgresUpsert
     end
 
     def primary_key
-      @klass.primary_key
+      @destination.primary_key
     end
 
     def destination_columns
-      @klass.column_names
+      @destination.column_names
     end
 
     def quoted_table_name
-      @klass.quoted_table_name
-    end
-
-    def parse_source(source)
-      @source_data ||= source.instance_of?(String) ? File.open(source, 'r') : source
+      @destination.quoted_table_name
     end
 
     def source_columns
-      @source_columns ||= begin
-        columns_list = @options[:columns] ? @options[:columns].map(&:to_s) : []
-        if @options[:header]
-          # if header is present, we need to strip it from io, whether we use it for the columns list or not.
-          line = @source_data.gets
-          if columns_list.empty?
-            columns_list = line.strip.split(@options[:delimiter])
-          end
-        end
-        columns_list = columns_list.map { |c| @options[:map][c.to_s] } if @options[:map]
-        columns_list
-      end
+      @source.columns
     end
 
     def columns_string_for_copy
