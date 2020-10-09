@@ -33,7 +33,7 @@ module PostgresUpsert
       end
     end
 
-    def column_names
+    def destination_columns
       @column_names ||= begin
         query = "SELECT * FROM information_schema.columns WHERE TABLE_NAME = '#{@table_name}'"
         pg_result = ActiveRecord::Base.connection.execute query

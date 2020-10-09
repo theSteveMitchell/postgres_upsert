@@ -9,14 +9,14 @@ module PostgresUpsert
         unique_key: [primary_key],
         update_only: false
       })
+      parse_source(source)
       @options[:unique_key] = Array.wrap(@options[:unique_key])
-      @source = source.instance_of?(String) ? File.open(source, 'r') : source
-      @columns_list = get_columns
+
       generate_temp_table_name
     end
 
     def write
-      if @columns_list.empty?
+      if source_columns.empty?
         raise 'Either the :columns option or :header => true are required'
       end
 
@@ -27,7 +27,7 @@ module PostgresUpsert
       create_temp_table
 
       @copy_result = database_connection.raw_connection.copy_data %{COPY #{copy_table} #{columns_string} FROM STDIN #{csv_options}} do
-        while (line = @source.gets)
+        while (line = @source_data.gets)
           next if line.strip.empty?
 
           database_connection.raw_connection.put_copy_data line
@@ -61,7 +61,7 @@ module PostgresUpsert
       @klass.primary_key
     end
 
-    def column_names
+    def destination_columns
       @klass.column_names
     end
 
@@ -69,17 +69,23 @@ module PostgresUpsert
       @klass.quoted_table_name
     end
 
-    def get_columns
-      columns_list = @options[:columns] ? @options[:columns].map(&:to_s) : []
-      if @options[:header]
-        # if header is present, we need to strip it from io, whether we use it for the columns list or not.
-        line = @source.gets
-        if columns_list.empty?
-          columns_list = line.strip.split(@options[:delimiter])
+    def parse_source(source)
+      @source_data ||= source.instance_of?(String) ? File.open(source, 'r') : source
+    end
+
+    def source_columns
+      @source_columns ||= begin
+        columns_list = @options[:columns] ? @options[:columns].map(&:to_s) : []
+        if @options[:header]
+          # if header is present, we need to strip it from io, whether we use it for the columns list or not.
+          line = @source_data.gets
+          if columns_list.empty?
+            columns_list = line.strip.split(@options[:delimiter])
+          end
         end
+        columns_list = columns_list.map { |c| @options[:map][c.to_s] } if @options[:map]
+        columns_list
       end
-      columns_list = columns_list.map { |c| @options[:map][c.to_s] } if @options[:map]
-      columns_list
     end
 
     def columns_string_for_copy
@@ -88,29 +94,37 @@ module PostgresUpsert
     end
 
     def columns_string_for_select
-      columns = @columns_list.clone
-      columns << 'created_at' if column_names.include?('created_at') &&  !@columns_list.include?('created_at')
-      columns << 'updated_at' if column_names.include?('updated_at') &&  !@columns_list.include?('updated_at')
+      columns = source_columns.clone
+      columns << 'created_at' if inject_create_timestamp?
+      columns << 'updated_at' if inject_update_timestamp?
       get_columns_string(columns)
     end
 
     def columns_string_for_insert
-      columns = @columns_list.clone
-      columns << 'created_at' if column_names.include?('created_at') &&  !@columns_list.include?('created_at')
-      columns << 'updated_at' if column_names.include?('updated_at') &&  !@columns_list.include?('updated_at')
+      columns = source_columns.clone
+      columns << 'created_at' if inject_create_timestamp?
+      columns << 'updated_at' if inject_update_timestamp?
       get_columns_string(columns)
     end
 
     def select_string_for_insert
-      columns = @columns_list.clone
+      columns = source_columns.clone
       str = get_columns_string(columns)
-      str << ",'#{DateTime.now.utc}'" if column_names.include?('created_at') &&  !@columns_list.include?('created_at')
-      str << ",'#{DateTime.now.utc}'" if column_names.include?('updated_at') &&  !@columns_list.include?('updated_at')
+      str << ",'#{DateTime.now.utc}'" if inject_create_timestamp?
+      str << ",'#{DateTime.now.utc}'" if inject_update_timestamp?
       str
     end
 
+    def inject_create_timestamp?
+      destination_columns.include?('created_at') &&  !source_columns.include?('created_at')
+    end
+
+    def inject_update_timestamp?
+      destination_columns.include?('updated_at') &&  !source_columns.include?('updated_at')
+    end
+
     def select_string_for_create
-      columns = @columns_list.map(&:to_sym)
+      columns = source_columns.map(&:to_sym)
       @options[:unique_key].each do |key_component|
         columns << key_component.to_sym unless columns.include?(key_component.to_sym)
       end
@@ -118,7 +132,7 @@ module PostgresUpsert
     end
 
     def get_columns_string(columns = nil)
-      columns ||= @columns_list
+      columns ||= source_columns
       !columns.empty? ? "\"#{columns.join('","')}\"" : ''
     end
 
@@ -142,11 +156,11 @@ module PostgresUpsert
     end
 
     def update_set_clause
-      command = @columns_list.map do |col|
+      command = source_columns.map do |col|
         "\"#{col}\" = t.\"#{col}\""
       end
-      unless @columns_list.include?('updated_at')
-        command << "\"updated_at\" = '#{DateTime.now.utc}'" if column_names.include?('updated_at')
+      unless source_columns.include?('updated_at')
+        command << "\"updated_at\" = '#{DateTime.now.utc}'" if destination_columns.include?('updated_at')
       end
         "SET #{command.join(',')}"
     end
@@ -187,7 +201,7 @@ module PostgresUpsert
 
     def verify_temp_has_key
       @options[:unique_key].each do |key_component|
-        unless @columns_list.include?(key_component.to_s)
+        unless source_columns.include?(key_component.to_s)
           raise "Expected a unique column '#{key_component}' but the source data does not include this column.  Update the :columns list or explicitly set the unique_key option.}"
         end
       end
