@@ -15,6 +15,10 @@ module PostgresUpsert
         )
       end
 
+      def continuous_write_enabled
+        true
+      end
+
       def gets
         @source.gets
       end

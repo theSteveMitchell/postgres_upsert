@@ -19,15 +19,13 @@ module PostgresUpsert
     def write
       validate_options
 
-      csv_options = "DELIMITER '#{@options[:delimiter]}' CSV"
+      
       create_temp_table
 
-      @copy_result = database_connection.raw_connection.copy_data %{COPY #{@temp_table_name} #{columns_string_for_copy} FROM STDIN #{csv_options}} do
-        while (line = @source.gets)
-          next if line.strip.empty?
-
-          database_connection.raw_connection.put_copy_data line
-        end
+      if @source.continuous_write_enabled
+        write_continuous
+      else
+        write_batched
       end
 
       upsert_from_temp_table
@@ -37,6 +35,25 @@ module PostgresUpsert
     end
 
   private
+
+    def write_continuous
+      csv_options = "DELIMITER '#{@options[:delimiter]}' CSV"
+      @copy_result = database_connection.raw_connection.copy_data %{COPY #{@temp_table_name} #{columns_string_for_copy} FROM STDIN #{csv_options}} do
+        while (line = @source.gets)
+          next if line.strip.empty?
+
+          database_connection.raw_connection.put_copy_data line
+        end
+      end
+    end
+
+    def write_batched
+      @source.gets do |line|
+        @copy_result = database_connection.raw_connection.copy_data %{COPY #{@temp_table_name} #{columns_string_for_copy} FROM STDIN} do
+          database_connection.raw_connection.put_copy_data line
+        end
+      end
+    end
 
     def database_connection
       @destination.database_connection

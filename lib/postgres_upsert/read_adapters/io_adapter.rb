@@ -14,6 +14,10 @@ module PostgresUpsert
           delimiter: ',',
         )
       end
+      
+      def continuous_write_enabled
+        true
+      end
 
       def gets
         @source.gets

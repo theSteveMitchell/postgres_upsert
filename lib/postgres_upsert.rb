@@ -1,5 +1,6 @@
 require 'rubygems'
 require 'active_record'
+require 'postgres_upsert/read_adapters/active_record_adapter'
 require 'postgres_upsert/read_adapters/file_adapter'
 require 'postgres_upsert/read_adapters/io_adapter'
 require 'postgres_upsert/write_adapters/active_record_adapter'
@@ -23,8 +24,8 @@ module PostgresUpsert
         ReadAdapters::IOAdapter
       elsif [String].include?(source.class)
         ReadAdapters::FileAdapter
-      # elsif source < ActiveRecord::Base && destination < ActiveRecord::Base
-        #ModelToModelAdapter
+      elsif source < ActiveRecord::Base
+        ReadAdapters::ActiveRecordAdapter
       else
         raise "Source must be a Filename string, StringIO of data, or a ActiveRecord Class."
       end
