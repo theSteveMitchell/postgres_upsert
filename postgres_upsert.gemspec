@@ -24,9 +24,9 @@ Gem::Specification.new do |s|
 
   s.add_dependency "pg", '>= 0.17.0'
   s.add_dependency "activerecord", '>= 3.0.0'
-  s.add_dependency "rails", '>= 3.0.0'
+  s.add_dependency "rails", '>= 6.0.0'
   s.add_development_dependency "bundler"
   s.add_development_dependency "pry-rails"
-  s.add_development_dependency "rspec-rails", "~> 3.9"
+  s.add_development_dependency "rspec-rails", "~> 5.0"
 end
 
