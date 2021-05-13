@@ -1,15 +1,26 @@
 language: ruby
 dist: trusty
 before_install:
-    - gem install bundler
-    - cp config/database.yml.travis config/database.yml
-    - psql -c 'create database ar_pg_copy_test;' -U postgres
-    - bin/rake db:setup
+  - gpg2 --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+  - gem install bundler
+  - cp config/database.yml.travis config/database.yml
+  - psql -c 'create database ar_pg_copy_test;' -U postgres
 
 rvm:
   - 2.5.0
-  - 3.0
+  jobs:
+  # Use `fast_finish`, don't wait for any allowed failures.
+  fast_finish: true
+
+  include:
+    - name: Ruby 3
+      rvm: 3
+      script:
+        - gpg2 --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB && rvm get head
+
 script:
+  - gpg2 --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+  - bundle exec rake db:setup
   - bundle exec rspec spec
 services:
   postgresql
