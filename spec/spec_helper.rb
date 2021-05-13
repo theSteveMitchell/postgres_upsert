@@ -8,6 +8,7 @@ require 'fixtures/reserved_word_model'
 require 'fixtures/composite_key_model'
 require 'rspec/rails'
 require 'rspec/autorun'
+require 'database_cleaner/active_record'
 
 RSpec.configure do |config|
   config.before(:example) do
