@@ -73,7 +73,10 @@ GEM
     coderay (1.1.0)
     concurrent-ruby (1.1.8)
     crass (1.0.6)
-    database_cleaner (1.8.5)
+    database_cleaner-active_record (2.0.1)
+      activerecord (>= 5.a)
+      database_cleaner-core (~> 2.0.0)
+    database_cleaner-core (2.0.1)
     diff-lcs (1.4.4)
     erubi (1.10.0)
     globalid (0.4.2)
@@ -188,7 +191,7 @@ PLATFORMS
 
 DEPENDENCIES
   bundler
-  database_cleaner
+  database_cleaner-active_record
   postgres_upsert!
   pry-nav
   pry-rails
