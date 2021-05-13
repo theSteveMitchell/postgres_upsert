@@ -5,7 +5,7 @@ $:.unshift lib unless $:.include?(lib)
 
 Gem::Specification.new do |s|
   s.name = "postgres_upsert"
-  s.version = "5.0.0"
+  s.version = "5.1.0"
 
   s.platform    = Gem::Platform::RUBY
   s.required_ruby_version     = ">= 1.8.7"
