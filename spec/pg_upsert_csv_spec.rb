@@ -4,6 +4,8 @@ describe "pg_upsert from file with CSV format" do
 
   before do
     DateTime.stub_chain(:now, :utc).and_return (DateTime.parse("2012-01-01").utc.round(4))
+    @time_now = Time.now.round(4)
+    allow(Time).to receive(:now).and_return(@time_now)
   end
 
   def timestamp
