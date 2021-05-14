@@ -1,16 +1,11 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 
 describe "pg_upsert from file with CSV format" do
-  before(:each) do
-    ActiveRecord::Base.connection.execute %{
-      TRUNCATE TABLE test_models;
-      TRUNCATE TABLE three_columns;
-      SELECT setval('test_models_id_seq', 1, false);
-    }
-  end
 
   before do
-    DateTime.stub_chain(:now, :utc).and_return (DateTime.parse("2012-01-01").utc)
+    DateTime.stub_chain(:now, :utc).and_return (DateTime.parse("2012-01-01").utc.round(4))
+    @time_now = Time.now.round(4)
+    allow(Time).to receive(:now).and_return(@time_now)
   end
 
   def timestamp
@@ -148,7 +143,7 @@ describe "pg_upsert from file with CSV format" do
 
     it "should clean up the temp table after completion" do
       PostgresUpsert.write TestModel, File.expand_path('spec/fixtures/tab_with_two_lines.csv'), :delimiter => "\t"
-      
+
       ActiveRecord::Base.connection.tables.should_not include("test_models_temp")
     end
 
@@ -208,7 +203,7 @@ describe "pg_upsert from file with CSV format" do
 
       expect{
       PostgresUpsert.write(ThreeColumn, file, :header => true)
-      }.to raise_error (/Expected a unique column 'id'/)
+      }.to raise_error (/Expected column 'id'/)
     end
 
   end

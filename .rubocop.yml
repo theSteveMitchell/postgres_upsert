@@ -1,0 +1,57 @@
+AllCops:
+  Exclude:
+    - '.*'
+    - 'app/*'
+    - 'bin/*'
+    - 'config*'
+    - 'db/*'
+    - '*.md'
+    - 'Gemfile'
+    - 'Gemfile.lock'
+
+Layout/Tab:
+  Enabled: false
+
+Layout/IndentationWidth:
+  Enabled: false
+
+Metrics/LineLength:
+  Max: 99
+
+Metrics/MethodLength:
+  CountAsOne: ['array', 'hash', 'heredoc']
+
+Style/RescueModifier:
+  Enabled: false
+
+Layout/TrailingEmptyLines:
+  Enabled: false
+
+Layout/AccessModifierIndentation:
+  Enabled: false
+
+Style/BlockComments:
+  Exclude:
+    - 'spec/spec_helper.rb'
+
+Style/Documentation:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Style/HashEachMethods:
+  Enabled: true
+
+Style/HashTransformKeys:
+  Enabled: true
+
+Style/HashTransformValues:
+  Enabled: true
+
+Metrics/BlockLength:
+  Exclude: 
+    - 'spec/*'
+
+Layout/MultilineMethodCallIndentation:
+  Enabled: false

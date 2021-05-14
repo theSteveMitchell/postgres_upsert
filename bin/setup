@@ -4,6 +4,19 @@ require 'pathname'
 # path to your application root.
 APP_ROOT = Pathname.new File.expand_path('../../',  __FILE__)
 
+
+def silently command
+  system command + " > /dev/null 2>&1"
+end
+
+def successfully command
+  silently command or fail "Error in script: " + command
+end
+
+def announce message
+  puts "\n== " + message + " =="
+end
+
 Dir.chdir APP_ROOT do
   # This script is a starting point to setup your application.
   # Add necessary setup steps to this file:
@@ -16,6 +29,20 @@ Dir.chdir APP_ROOT do
   # unless File.exist?("config/database.yml")
   #   system "cp config/database.yml.sample config/database.yml"
   # end
+
+  unless silently "ls -A /usr/local/var/postgres"
+    announce "initializing postgres db in /usr/local/var/postgres"
+    silently "initdb /usr/local/var/postgres"
+
+    announce "creating superuser 'postgres'.  Hope that's cool?"
+    silently "createuser -s postgres"
+  end
+
+  unless silently "ls -A ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist"
+    announce "setting up Postgres to start on launch"
+    silently "ln -sfv /usr/local/opt/postgresql/*.plist ~/Library/LaunchAgents"
+    silently "launchctl load -w ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist"
+  end
 
   puts "\n== Preparing database =="
   system "bin/rake db:setup"

@@ -5,7 +5,7 @@ $:.unshift lib unless $:.include?(lib)
 
 Gem::Specification.new do |s|
   s.name = "postgres_upsert"
-  s.version = "5.0.0"
+  s.version = "5.1.0"
 
   s.platform    = Gem::Platform::RUBY
   s.required_ruby_version     = ">= 1.8.7"
@@ -13,6 +13,7 @@ Gem::Specification.new do |s|
   s.date = "2014-09-12"
   s.description = "Uses Postgres's powerful COPY command to upsert large sets of data into ActiveRecord tables"
   s.email = "thestevemitchell@gmail.com"
+  s.license = "MIT"
   git_files            = `git ls-files`.split("\n") rescue ''
   s.files              = git_files
   s.test_files         = `git ls-files -- {test,spec,features}/*`.split("\n")
@@ -27,6 +28,9 @@ Gem::Specification.new do |s|
   s.add_dependency "rails", '>= 3.0.0'
   s.add_development_dependency "bundler"
   s.add_development_dependency "pry-rails"
-  s.add_development_dependency "rspec-rails", "~> 3.9"
+  s.add_development_dependency "pry-nav"
+  s.add_development_dependency "rspec-rails", ">= 3.9"
+  s.add_development_dependency "database_cleaner-active_record"
+  s.add_development_dependency "rubocop"
 end
 
