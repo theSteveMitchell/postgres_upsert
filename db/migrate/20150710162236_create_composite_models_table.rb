@@ -1,4 +1,4 @@
-class CreateCompositeModelsTable < ActiveRecord::Migration
+class CreateCompositeModelsTable < ActiveRecord::Migration[6.0]
   def change
     create_table :composite_key_models do |t|
       t.integer :comp_key_1

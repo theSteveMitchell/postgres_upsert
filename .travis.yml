@@ -1,6 +1,20 @@
 language: ruby
+dist: trusty
 before_install:
-    - gem install bundler
+  - gpg2 --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+  - gem install bundler
+  - cp config/database.yml.travis config/database.yml
+  - psql -c 'create database ar_pg_copy_test;' -U postgres
+
 rvm:
   - 2.5.0
-  - ruby-head
+
+script:
+  - gpg2 --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+  - bundle exec rake db:setup
+  - bundle exec rspec spec
+services:
+  postgresql
+addons:
+  postgresql: "9.4"
+
